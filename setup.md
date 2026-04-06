@@ -139,7 +139,62 @@ sudo wget https://jdbc.postgresql.org/download/postgresql-42.7.3.jar
 
 ---
 
-## Step 5 — Configure Logstash Pipeline
+## Step 5 — Configure Environment Variables
+
+Instead of hardcoding database credentials in the Logstash config, store them in an environment file.
+
+1. Create the `.env` file on the VM:
+
+```bash
+sudo nano /etc/logstash/.env
+```
+
+Add your actual values:
+
+```
+DB_HOST=<your_db_host>
+DB_PORT=5432
+DB_NAME=<your_db_name>
+DB_USER=<your_db_user>
+DB_PASSWORD=<your_db_password>
+```
+
+2. Secure the file so only root can read it:
+
+```bash
+sudo chmod 600 /etc/logstash/.env
+sudo chown logstash:logstash /etc/logstash/.env
+```
+
+3. Tell systemd to load the `.env` file when starting Logstash:
+
+```bash
+sudo systemctl edit logstash
+```
+
+Add:
+
+```ini
+[Service]
+EnvironmentFile=/etc/logstash/.env
+Restart=always
+RestartSec=1
+
+[Unit]
+RefuseManualStop=yes
+```
+
+4. Reload systemd:
+
+```bash
+sudo systemctl daemon-reload
+```
+
+> The `.env` file should never be committed to version control. Add it to `.gitignore`. Use `.env.example` to see the expected format without real values.
+
+---
+
+## Step 6 — Configure Logstash Pipeline
 
 Create `/etc/logstash/conf.d/honeypot.conf`:
 
@@ -215,9 +270,9 @@ output {
     jdbc {
       driver_jar_path => "/usr/share/logstash/postgresql-42.7.3.jar"
       driver_class => "org.postgresql.Driver"
-      connection_string => "jdbc:postgresql://<DB_HOST>:5432/honeypot_logs"
-      username => "YOUR_DB_USERNAME"
-      password => "YOUR_DB_PASSWORD"
+      connection_string => "jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}"
+      username => "${DB_USER}"
+      password => "${DB_PASSWORD}"
       statement => [
         "INSERT INTO attacks (timestamp, attacker_ip, http_method, endpoint, status_code, user_agent, raw_log) VALUES (?::timestamp, ?, ?, ?, ?::integer, ?, ?)",
         "@timestamp",
@@ -233,9 +288,9 @@ output {
     jdbc {
       driver_jar_path => "/usr/share/logstash/postgresql-42.7.3.jar"
       driver_class => "org.postgresql.Driver"
-      connection_string => "jdbc:postgresql://<DB_HOST>:5432/honeypot_logs"
-      username => "YOUR_DB_USERNAME"
-      password => "YOUR_DB_PASSWORD"
+      connection_string => "jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}"
+      username => "${DB_USER}"
+      password => "${DB_PASSWORD}"
       statement => [
         "INSERT INTO auth_logs (timestamp, username, source_ip, status, raw_log) VALUES (?::timestamp, ?, ?, ?, ?)",
         "@timestamp",
@@ -250,9 +305,9 @@ output {
       jdbc {
         driver_jar_path => "/usr/share/logstash/postgresql-42.7.3.jar"
         driver_class => "org.postgresql.Driver"
-        connection_string => "jdbc:postgresql://<DB_HOST>:5432/honeypot_logs"
-        username => "YOUR_DB_USERNAME"
-        password => "YOUR_DB_PASSWORD"
+        connection_string => "jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}"
+        username => "${DB_USER}"
+        password => "${DB_PASSWORD}"
         statement => [
           "INSERT INTO command_logs (timestamp, command, raw_log) VALUES (?::timestamp, ?, ?)",
           "@timestamp",
@@ -265,16 +320,15 @@ output {
 }
 ```
 
-> Replace `YOUR_DB_USERNAME`, `YOUR_DB_PASSWORD` and `<DB_HOST>` with your actual values.
-
 Key notes:
+- `${DB_HOST}`, `${DB_PORT}`, `${DB_NAME}`, `${DB_USER}`, `${DB_PASSWORD}` are loaded from `/etc/logstash/.env` via the systemd `EnvironmentFile` directive. Logstash natively supports `${VARIABLE_NAME}` syntax in config files.
 - `?::timestamp` casts the Logstash `@timestamp` string to a PostgreSQL TIMESTAMP type.
 - `?::integer` casts the HTTP status code string to INTEGER.
 - The `_grokparsefailure` drop ensures malformed or irrelevant log lines are discarded.
 
 ---
 
-## Step 6 — Install and Configure Auditd
+## Step 7 — Install and Configure Auditd
 
 ```bash
 sudo apt install auditd audispd-plugins -y
@@ -313,7 +367,7 @@ sudo auditctl -s | grep enabled   # verify auditing is enabled
 
 ---
 
-## Step 7 — Install OpenSSH
+## Step 8 — Install OpenSSH
 
 ```bash
 sudo apt install openssh-server -y
@@ -333,7 +387,7 @@ sudo systemctl restart sshd
 
 ---
 
-## Step 8 — SSH Login Tracking
+## Step 9 — SSH Login Tracking
 
 SSH login attempts are tracked via `auth.log` and stored in the `auth_logs` table. The `status` column has the following values:
 
@@ -352,17 +406,18 @@ ssh ubuntu@localhost        # SUCCESS (correct password) or FAILED (wrong passwo
 
 ---
 
-## Step 9 — Secure the Processes
+## Step 10 — Secure the Processes
 
-Make Logstash, Filebeat, and Auditd restart automatically and refuse manual stops:
+Make Logstash, Filebeat, and Auditd restart automatically and refuse manual stops.
+
+The Logstash override was already created in Step 5. For Filebeat and Auditd:
 
 ```bash
-sudo systemctl edit logstash
 sudo systemctl edit filebeat
 sudo systemctl edit auditd
 ```
 
-Add to each override file:
+Add to each:
 
 ```ini
 [Service]
@@ -373,17 +428,43 @@ RestartSec=1
 RefuseManualStop=yes
 ```
 
-Reload and restart:
+Reload and restart all services:
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl restart logstash filebeat auditd
 ```
 
-Make config files immutable:
+Make the Logstash config file immutable so it cannot be modified or deleted even by root:
 ```bash
 sudo chattr +i /etc/logstash/conf.d/honeypot.conf
 ```
 
-> Even if an attacker gets root access, logs are already being shipped to the external database in real time. The 5-10 second shipping window makes it extremely difficult to cover tracks.
+To temporarily remove the immutable flag when you need to make changes:
+```bash
+sudo chattr -i /etc/logstash/conf.d/honeypot.conf
+# make your changes
+sudo chattr +i /etc/logstash/conf.d/honeypot.conf
+```
+
+> Even if an attacker gets root access, logs are already being shipped to the external database in real time. The few seconds shipping window makes it extremely difficult to cover tracks.
 
 ---
+
+## GitHub
+
+**Safe to upload:**
+- `honeypot.conf` — credentials are loaded from `.env`, not hardcoded
+- `filebeat.yml`
+- `setup.md` and other documentation
+- SQL schema files
+- `.env.example` — shows the expected format without real values
+
+**Never upload:**
+- `.env` — contains real credentials
+- Log files (`auth.log`, `audit.log`, etc.)
+- Database dumps
+
+`.gitignore` should include at minimum:
+```
+.env
+*.log
+```
