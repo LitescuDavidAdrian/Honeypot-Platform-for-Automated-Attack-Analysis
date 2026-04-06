@@ -10,24 +10,10 @@ A hybrid honeypot with dynamic operational behavior. Low-interaction, built on U
 TODO: Insert picture of the system architecture
 ```
 
-**Backend:** Java + Spring Boot  
+**Backend:** Java + Spring Boot
 **Frontend:** React  
 **Database:** PostgreSQL (managed via DBeaver)  
 **Architecture:** REST + JPA
-
----
-
-## Flow
-
-**Flow 1 — Attack ingestion:**
-```
-WIP
-```
-
-**Flow 2 — Dashboard:**
-```
-WIP
-```
 
 ---
 
