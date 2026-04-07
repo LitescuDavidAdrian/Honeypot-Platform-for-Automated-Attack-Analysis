@@ -1,6 +1,6 @@
 # Honeypot-Platform-for-Automated-Attack-Analysis
 
-A hybrid honeypot with dynamic operational behavior. The platform captures, stores, and analyzes attacks in real time, combining a low-interaction honeypot running on an Ubuntu VM with a web dashboard built in Spring Boot and React.
+A hybrid honeypot with dynamic operational behavior, featuring a fully automated deployment pipeline and real-time attack analysis. The platform captures, stores, and analyzes attacks in real time, combining a low-interaction honeypot running on an Ubuntu VM with a web dashboard built in Spring Boot and React.
 
 The honeypot is low-interaction but changes its behavior corresponding to the operational mode — research or production.
 
@@ -12,7 +12,8 @@ The honeypot is low-interaction but changes its behavior corresponding to the op
 Honeypot-Platform-for-Automated-Attack-Analysis/
 ├── backend/        ← Spring Boot REST API (Java 21)
 ├── frontend/       ← React web dashboard
-├── setup.md        ← Full honeypot setup and configuration guide
+├── setup.sh        ← Automated honeypot setup script
+├── setup.md        ← Manual setup and configuration guide
 ├── .env.example    ← Environment variable template
 └── README.md
 ```
@@ -105,9 +106,40 @@ PostgreSQL Database
 
 ---
 
-## Getting Started
+## Automated Setup Script
 
-### Honeypot Setup
+The project includes a fully automated setup script that provisions the entire honeypot environment on a fresh Ubuntu virtual machine.
+
+The script installs and configures all required components:
+
+- Apache HTTP Server
+- OpenSSH (with verbose logging enabled)
+- Auditd (with command tracking rules)
+- Filebeat (real-time log shipping)
+- Logstash (log parsing and database ingestion)
+- PostgreSQL JDBC driver
+
+It also applies several security and resilience measures:
+
+- Loads database credentials securely from a `.env` file
+- Configures Logstash to use environment variables (no hardcoded secrets)
+- Enables automatic service restart (`Restart=always`)
+- Prevents manual stopping of critical services (`RefuseManualStop=yes`)
+- Locks Auditd rules to prevent tampering (`-e 2`)
+- Makes the Logstash pipeline configuration immutable (`chattr +i`)
+
+### Usage
+
+```bash
+cp .env.example .env
+nano .env
+chmod +x setup.sh
+sudo ./setup.sh
+```
+
+---
+
+### Manual honeypot Setup
 
 See [setup.md](setup.md) for the full step-by-step guide to setting up the honeypot on the Ubuntu VM, including Apache, Filebeat, Logstash, Auditd, OpenSSH, and PostgreSQL configuration.
 
@@ -122,7 +154,7 @@ The backend will start on `http://localhost:8080`.
 
 ### Frontend Setup
 
-Coming soon.
+WIP
 
 ---
 
