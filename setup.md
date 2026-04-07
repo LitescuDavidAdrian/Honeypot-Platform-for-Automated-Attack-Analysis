@@ -432,25 +432,3 @@ sudo chattr +i /etc/logstash/conf.d/honeypot.conf
 ```
 
 > Even if an attacker gets root access, logs are already being shipped to the external database in real time. The few seconds shipping window makes it extremely difficult to cover tracks.
-
----
-
-## GitHub
-
-**Safe to upload:**
-- `honeypot.conf` — credentials are loaded from `.env`, not hardcoded
-- `filebeat.yml`
-- `setup.md` and other documentation
-- SQL schema files
-- `.env.example` — shows the expected format without real values
-
-**Never upload:**
-- `.env` — contains real credentials
-- Log files (`auth.log`, `audit.log`, etc.)
-- Database dumps
-
-`.gitignore` should include at minimum:
-```
-.env
-*.log
-```
