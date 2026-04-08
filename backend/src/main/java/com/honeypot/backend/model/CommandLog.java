@@ -5,7 +5,7 @@ import jdk.jfr.Enabled;
 
 import java.time.LocalDateTime;
 
-@Enabled
+@Entity
 @Table(name = "command_logs")
 public class CommandLog {
 
