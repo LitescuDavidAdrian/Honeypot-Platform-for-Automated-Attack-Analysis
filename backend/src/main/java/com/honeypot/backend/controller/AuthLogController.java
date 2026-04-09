@@ -8,7 +8,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/auth-logs")
-@CrossOrigin
 public class AuthLogController {
 
     private final AuthLogService authLogService;

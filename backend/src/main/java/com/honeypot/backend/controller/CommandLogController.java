@@ -8,7 +8,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/command-logs")
-@CrossOrigin
 public class CommandLogController {
 
     private final CommandLogService commandLogService;

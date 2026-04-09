@@ -8,7 +8,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/attacks")
-@CrossOrigin // allows React later
 public class AttackController {
 
     private final AttackService attackService;
