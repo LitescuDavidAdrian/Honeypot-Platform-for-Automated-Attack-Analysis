@@ -2,6 +2,8 @@ package com.honeypot.backend.service;
 
 import com.honeypot.backend.model.Attack;
 import com.honeypot.backend.repository.AttackRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,8 +17,8 @@ public class AttackService {
         this.attackRepository = attackRepository;
     }
 
-    public List<Attack> getAllAttacks() {
-        return attackRepository.findAll();
+    public Page<Attack> getAllAttacks(Pageable pageable) {
+        return attackRepository.findAll(pageable);
     }
 
     public List<Attack> getByIp(String ip) {

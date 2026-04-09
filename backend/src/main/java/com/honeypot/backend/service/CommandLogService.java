@@ -2,6 +2,8 @@ package com.honeypot.backend.service;
 
 import com.honeypot.backend.model.CommandLog;
 import com.honeypot.backend.repository.CommandLogRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,8 +17,8 @@ public class CommandLogService {
         this.commandLogRepository = commandLogRepository;
     }
 
-    public List<CommandLog> getALlCommandLogs() {
-        return commandLogRepository.findAll();
+    public Page<CommandLog> getALlCommandLogs(Pageable pageable) {
+        return commandLogRepository.findAll(pageable);
     }
 
     public List<CommandLog> getByCommand(String command) {

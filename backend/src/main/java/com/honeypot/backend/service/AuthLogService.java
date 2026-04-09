@@ -2,6 +2,8 @@ package com.honeypot.backend.service;
 
 import com.honeypot.backend.model.AuthLog;
 import com.honeypot.backend.repository.AuthLogRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,8 +17,8 @@ public class AuthLogService {
         this.authLogRepository = authLogRepository;
     }
 
-    public List<AuthLog> getAllAuthLogs() {
-        return authLogRepository.findAll();
+    public Page<AuthLog> getAllAuthLogs(Pageable pageable) {
+        return authLogRepository.findAll(pageable);
     }
 
     public List<AuthLog> getByUsername(String username) {
