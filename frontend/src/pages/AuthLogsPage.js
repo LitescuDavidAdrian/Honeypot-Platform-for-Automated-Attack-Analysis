@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { getAuthLogs, searchAuthLogs } from '../services/api';
 
+const formatDate = (timestamp) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    return date.toLocaleDateString('en-GB') + ' ' + date.toLocaleTimeString('en-GB');
+};
+
 function AuthLogsPage() {
     const [logs, setLogs] = useState([]);
     const [page, setPage] = useState(0);
@@ -25,22 +31,38 @@ function AuthLogsPage() {
     const handleClear = () => {
         setSearch({ username: '', ip: '', status: '' });
         setPage(0);
-        fetchLogs();
     };
 
     useEffect(() => { fetchLogs(); }, [page]);
+
+    useEffect(() => {
+        const hasSearch = search.username || search.ip || search.status;
+        if (hasSearch) {
+            handleSearch();
+        } else {
+            fetchLogs();
+        }
+    }, [search]);
 
     return (
         <div>
             <h2 style={{ color: '#e94560' }}>Auth Logs</h2>
             <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
-                <input placeholder="Username" value={search.username}
-                    onChange={e => setSearch({ ...search, username: e.target.value })} />
-                <input placeholder="IP Address" value={search.ip}
-                    onChange={e => setSearch({ ...search, ip: e.target.value })} />
-                <input placeholder="Status" value={search.status}
-                    onChange={e => setSearch({ ...search, status: e.target.value })} />
-                <button onClick={handleSearch}>Search</button>
+                <input 
+                placeholder="Username" 
+                value={search.username}
+                onChange={e => setSearch({ ...search, username: e.target.value })} 
+                />
+                <input 
+                placeholder="IP Address" 
+                value={search.ip}
+                onChange={e => setSearch({ ...search, ip: e.target.value })} 
+                />
+                <input placeholder="Status" 
+                value={search.status}
+                onChange={e => setSearch({ ...search, status: e.target.value })}   
+                />
+                {/* <button onClick={handleSearch}>Search</button> */}
                 <button onClick={handleClear}>Clear</button>
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -55,7 +77,7 @@ function AuthLogsPage() {
                 <tbody>
                     {logs.map(l => (
                         <tr key={l.id} style={{ borderBottom: '1px solid #ddd' }}>
-                            <td>{l.timestamp}</td>
+                            <td>{formatDate(l.timestamp)}</td>
                             <td>{l.username}</td>
                             <td>{l.sourceIp}</td>
                             <td>{l.status}</td>

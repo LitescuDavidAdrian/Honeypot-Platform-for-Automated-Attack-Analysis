@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { getAttacks, searchAttacks } from '../services/api';
 
+const formatDate = (timestamp) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    return date.toLocaleDateString('en-GB') + ' ' + date.toLocaleTimeString('en-GB');
+};
+
 function AttacksPage() {
     const [attacks, setAttacks] = useState([]);
     const [page, setPage] = useState(0);
@@ -25,29 +31,46 @@ function AttacksPage() {
     const handleClear = () => {
         setSearch({ endpoint: '', ip: '', status: '' });
         setPage(0);
-        fetchAttacks();
     };
 
     useEffect(() => { fetchAttacks(); }, [page]);
+
+    useEffect(() => {
+        const hasSearch = search.endpoint || search.ip || search.status;
+        if (hasSearch) {
+            handleSearch();
+        } else {
+            fetchAttacks();
+        }
+    }, [search]);
 
     return (
         <div>
             <h2 style={{ color: '#e94560' }}>Attacks</h2>
             <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
-                <input placeholder="Endpoint" value={search.endpoint} 
-                    onChange={e => setSearch({ ...search, endpoint: e.target.value })} />
-                <input placeholder="IP Address" value={search.ip} 
-                    onChange={e => setSearch({ ...search, ip: e.target.value })} />
-                <input placeholder="Status Code" value={search.status} 
-                    onChange={e => setSearch({ ...search, status: e.target.value })} />    
-                <button onClick={handleSearch}>Search</button>
+                <input 
+                placeholder="Endpoint" 
+                value={search.endpoint} 
+                onChange={e => setSearch({ ...search, endpoint: e.target.value })} 
+                />
+                <input 
+                placeholder="IP Address" 
+                value={search.ip} 
+                onChange={e => setSearch({ ...search, ip: e.target.value })} 
+                />
+                <input 
+                placeholder="Status Code" 
+                value={search.status} 
+                onChange={e => setSearch({ ...search, status: e.target.value })} 
+                />    
+                {/* <button onClick={handleSearch}>Search</button> */}
                 <button onClick={handleClear}>Clear</button>
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                     <tr style={{ backgroundColor: '#1a1a2e', color: '#ffffff' }}>
                         <th>Timestamp</th>
-                        <th>Attacker</th>
+                        <th>Attacker IP</th>
                         <th>Method</th>
                         <th>Endpoint</th>
                         <th>Status</th>
@@ -57,7 +80,7 @@ function AttacksPage() {
                 <tbody>
                     {attacks.map(a => (
                         <tr key={a.id} style={{ borderBottom: '1px solid #ddd' }}>
-                            <td>{a.timestamp}</td>
+                            <td>{formatDate(a.timestamp)}</td>
                             <td>{a.attackerIp}</td>
                             <td>{a.httpMethod}</td>
                             <td>{a.endpoint}</td>

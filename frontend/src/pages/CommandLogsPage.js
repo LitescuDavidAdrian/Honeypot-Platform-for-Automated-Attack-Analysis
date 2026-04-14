@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { getCommandLogs, searchCommandLogs } from '../services/api';
 
+const formatDate = (timestamp) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    return date.toLocaleDateString('en-GB') + ' ' + date.toLocaleTimeString('en-GB');
+};
+
 function CommandLogsPage() {
     const [logs, setLogs] = useState([]);
     const [page, setPage] = useState(0);
@@ -23,18 +29,29 @@ function CommandLogsPage() {
     const handleClear = () => {
         setSearch({ command: '' });
         setPage(0);
-        fetchLogs();
     };
 
     useEffect(() => { fetchLogs(); }, [page]);
+
+    useEffect(() => {
+        const hasSearch = search.command;
+        if (hasSearch) {
+            handleSearch();
+        } else {
+            fetchLogs();
+        }
+    }, [search]);
 
     return (
         <div>
             <h2 style={{ color: '#e94560' }}>Command Logs</h2>
             <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
-                <input placeholder="Command" value={search.command}
-                    onChange={e => setSearch({ ...search, command: e.target.value })} />
-                <button onClick={handleSearch}>Search</button>
+                <input 
+                placeholder="Command" 
+                value={search.command}
+                onChange={e => setSearch({ ...search, command: e.target.value })} 
+                />
+                {/* <button onClick={handleSearch}>Search</button> */}
                 <button onClick={handleClear}>Clear</button>
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -47,7 +64,7 @@ function CommandLogsPage() {
                 <tbody>
                     {logs.map(l => (
                         <tr key={l.id} style={{ borderBottom: '1px solid #ddd' }}>
-                            <td>{l.timestamp}</td>
+                            <td>{formatDate(l.timestamp)}</td>
                             <td>{l.command}</td>
                         </tr>
                     ))}
