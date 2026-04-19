@@ -21,39 +21,7 @@ public class AttackService {
         return attackRepository.findAll(pageable);
     }
 
-    public List<Attack> getByIp(String ip) {
-        return attackRepository.findByAttackerIp(ip);
-    }
-
-    public List<Attack> getByStatusCode(Integer statusCode) {
-        return attackRepository.findByStatusCode(statusCode);
-    }
-
-    public List<Attack> getByEndpoint(String endpoint) {
-        return attackRepository.findByEndpoint(endpoint);
-    }
-
     public List<Attack> search(String endpoint, String ip, Integer status) {
-        List<Attack> attacks = attackRepository.findAll();
-
-        if (endpoint != null) {
-            attacks = attacks.stream()
-                    .filter(a -> endpoint.equals(a.getEndpoint()))
-                    .toList();
-        }
-
-        if (ip != null) {
-            attacks = attacks.stream()
-                    .filter(a -> ip.equals(a.getAttackerIp()))
-                    .toList();
-        }
-
-        if(status != null) {
-            attacks = attacks.stream()
-                    .filter(a -> status.equals(a.getStatusCode()))
-                    .toList();
-        }
-
-        return attacks;
+        return attackRepository.search(endpoint, ip, status);
     }
 }

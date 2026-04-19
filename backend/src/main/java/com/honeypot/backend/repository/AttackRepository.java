@@ -2,15 +2,20 @@ package com.honeypot.backend.repository;
 
 import com.honeypot.backend.model.Attack;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
 public interface AttackRepository extends JpaRepository<Attack, Long> {
 
-    // Useful queries
-    List<Attack> findByAttackerIp(String attackerIp);
+    @Query(value = "SELECT * FROM attacks WHERE " +
+    "(:endpoint IS NULL OR LOWER(endpoint) LIKE LOWER(CONCAT('%', :endpoint, '%'))) AND " +
+    "(:ip IS NULL OR LOWER(attacker_ip) LIKE LOWER(CONCAT('%', :ip, '%'))) AND " +
+    "(:status IS NULL OR status_code = :status)",
+    nativeQuery = true)
+    List<Attack> search(@Param("endpoint") String endpoint,
+                        @Param("ip") String ip,
+                        @Param("status") Integer status);
 
-    List<Attack> findByStatusCode(Integer statusCode);
-
-    List<Attack> findByEndpoint(String endpoint);
 }

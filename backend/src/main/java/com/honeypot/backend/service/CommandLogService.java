@@ -21,20 +21,7 @@ public class CommandLogService {
         return commandLogRepository.findAll(pageable);
     }
 
-    public List<CommandLog> getByCommand(String command) {
-        return commandLogRepository.findByCommand(command);
-    }
-
     public List<CommandLog> search(String command) {
-        List<CommandLog> commandLogs = commandLogRepository.findAll();
-
-        if (command != null) {
-            commandLogs = commandLogs.stream()
-                    .filter(c -> c.getCommand() != null &&
-                            c.getCommand().contains(command))
-                    .toList();
-        }
-
-        return commandLogs;
+        return commandLogRepository.search(command);
     }
 }
