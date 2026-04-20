@@ -9,8 +9,8 @@ import java.util.List;
 
 public interface CommandLogRepository extends JpaRepository<CommandLog, Long> {
 
-    @Query (value = "SELECT c FROM CommandLog c WHERE " +
-    "(:command IS NULL OR LOWER(c.command) LIKE LOWER(CONCAT('%', :command, '%')))",
+    @Query (value = "SELECT * FROM command_logs WHERE " +
+    "(:command IS NULL OR LOWER(command) LIKE LOWER(CONCAT('%', :command, '%')))",
     nativeQuery = true)
     List<CommandLog> search(@Param("command") String command);
 }
