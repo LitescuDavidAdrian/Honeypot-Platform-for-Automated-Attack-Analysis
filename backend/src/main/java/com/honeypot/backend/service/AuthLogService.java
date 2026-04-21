@@ -21,7 +21,7 @@ public class AuthLogService {
         return authLogRepository.findAll(pageable);
     }
 
-    public List<AuthLog> search(String username, String ip, String status) {
-        return authLogRepository.search(username, ip, status);
+    public Page<AuthLog> search(String username, String ip, String status, Pageable pageable) {
+        return authLogRepository.search(username, ip, status, pageable);
     }
 }

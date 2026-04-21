@@ -13,36 +13,37 @@ function AuthLogsPage() {
     const [totalPages, setTotalPages] = useState(0);
     const [search, setSearch] = useState({ username: '', ip: '', status: '' });
 
-    const fetchLogs = () => {
-        getAuthLogs(page).then(res => {
-            setLogs(res.data.content);
-            setTotalPages(res.data.totalPages);
-        });
-    };
-
-    const handleSearch = () => {
-        const params = {};
+    const fetchData = (currentPage) => {
+        const hasSearch = search.username || search.ip || search.status;
+        const params = {
+            page: currentPage,
+            size: 20
+        };
         if (search.username) params.username = search.username;
         if (search.ip) params.ip = search.ip;
         if (search.status) params.status = search.status;
-        searchAuthLogs(params).then(res => setLogs(res.data));
-    };
+
+        if(hasSearch) {
+            searchAuthLogs(params).then(res => {
+                setLogs(res.data.content);
+                setTotalPages(res.data.totalPages);
+            });
+        } else {
+            getAuthLogs(currentPage).then(res => {
+                setLogs(res.data.content);
+                setTotalPages(res.data.totalPages);
+            });
+        }
+    }
 
     const handleClear = () => {
         setSearch({ username: '', ip: '', status: '' });
         setPage(0);
     };
 
-    useEffect(() => { fetchLogs(); }, [page]);
+    useEffect(() => { fetchData(page); }, [page, search]);
 
-    useEffect(() => {
-        const hasSearch = search.username || search.ip || search.status;
-        if (hasSearch) {
-            handleSearch();
-        } else {
-            fetchLogs();
-        }
-    }, [search]);
+    useEffect(() => { setPage(0); }, [search]);
 
     return (
         <div>

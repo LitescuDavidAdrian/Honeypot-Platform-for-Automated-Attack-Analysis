@@ -1,6 +1,8 @@
 package com.honeypot.backend.repository;
 
 import com.honeypot.backend.model.Attack;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,12 +12,17 @@ import java.util.List;
 public interface AttackRepository extends JpaRepository<Attack, Long> {
 
     @Query(value = "SELECT * FROM attacks WHERE " +
-    "(:endpoint IS NULL OR LOWER(endpoint) LIKE LOWER(CONCAT('%', :endpoint, '%'))) AND " +
-    "(:ip IS NULL OR LOWER(attacker_ip) LIKE LOWER(CONCAT('%', :ip, '%'))) AND " +
-    "(:status IS NULL OR status_code = :status)",
+            "(:endpoint IS NULL OR LOWER(endpoint) LIKE LOWER(CONCAT('%', :endpoint, '%'))) AND " +
+            "(:ip IS NULL OR LOWER(attacker_ip) LIKE LOWER(CONCAT('%', :ip, '%'))) AND " +
+            "(:status IS NULL OR status_code = :status)",
+    countQuery = "SELECT COUNT(*) FROM attacks WHERE " +
+            "(:endpoint IS NULL OR LOWER(endpoint) LIKE LOWER(CONCAT('%', :endpoint, '%'))) AND " +
+            "(:ip IS NULL OR LOWER(attacker_ip) LIKE LOWER(CONCAT('%', :ip, '%'))) AND " +
+            "(:status IS NULL OR status_code = :status)",
     nativeQuery = true)
-    List<Attack> search(@Param("endpoint") String endpoint,
+    Page<Attack> search(@Param("endpoint") String endpoint,
                         @Param("ip") String ip,
-                        @Param("status") Integer status);
+                        @Param("status") Integer status,
+                        Pageable pageable);
 
 }

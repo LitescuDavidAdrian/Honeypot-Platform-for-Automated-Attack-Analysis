@@ -21,7 +21,7 @@ public class CommandLogService {
         return commandLogRepository.findAll(pageable);
     }
 
-    public List<CommandLog> search(String command) {
-        return commandLogRepository.search(command);
+    public Page<CommandLog> search(String command, Pageable pageable) {
+        return commandLogRepository.search(command, pageable);
     }
 }

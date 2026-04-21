@@ -36,9 +36,17 @@ public class CommandLogController {
     }
 
     @GetMapping("/search")
-    public List<CommandLog> search(
-            @RequestParam(required = false) String command
+    public Page<CommandLog> search(
+            @RequestParam(required = false) String command,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "timestamp") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction
     ) {
-        return commandLogService.search(command);
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+        return commandLogService.search(command, pageable);
     }
 }

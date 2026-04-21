@@ -13,19 +13,27 @@ function AttacksPage() {
     const [totalPages, setTotalPages] = useState(0);
     const [search, setSearch] = useState({ endpoint: '', ip: '', status: '' });
 
-    const fetchAttacks = () => {
-        getAttacks(page).then(res => {
-            setAttacks(res.data.content);
-            setTotalPages(res.data.totalPages);
-        });
-    };
-
-    const handleSearch = () => {
-        const params = {};
+    const fetchData = (currentPage) => {
+        const hasSearch = search.endpoint || search.ip || search.status;
+        const params = {
+            page: currentPage,
+            size: 20
+        };
         if (search.endpoint) params.endpoint = search.endpoint;
         if (search.ip) params.ip = search.ip;
         if (search.status) params.status = parseInt(search.status);
-        searchAttacks(params).then(res => setAttacks(res.data));
+
+        if (hasSearch) {
+            searchAttacks(params).then(res => {
+                setAttacks(res.data.content);
+                setTotalPages(res.data.totalPages);
+            });
+        } else {
+            getAttacks(currentPage).then(res => {
+                setAttacks(res.data.content);
+                setTotalPages(res.data.totalPages);
+            });
+        }
     };
 
     const handleClear = () => {
@@ -33,36 +41,29 @@ function AttacksPage() {
         setPage(0);
     };
 
-    useEffect(() => { fetchAttacks(); }, [page]);
+    useEffect(() => { fetchData(page); }, [page, search]);
 
-    useEffect(() => {
-        const hasSearch = search.endpoint || search.ip || search.status;
-        if (hasSearch) {
-            handleSearch();
-        } else {
-            fetchAttacks();
-        }
-    }, [search]);
+    useEffect(() => { setPage(0); }, [search]);
 
     return (
         <div>
             <h2 style={{ color: '#e94560' }}>Attacks</h2>
             <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
-                <input 
-                placeholder="Endpoint" 
-                value={search.endpoint} 
-                onChange={e => setSearch({ ...search, endpoint: e.target.value })} 
+                <input
+                    placeholder="Endpoint"
+                    value={search.endpoint}
+                    onChange={e => setSearch({ ...search, endpoint: e.target.value })}
                 />
-                <input 
-                placeholder="IP Address" 
-                value={search.ip} 
-                onChange={e => setSearch({ ...search, ip: e.target.value })} 
+                <input
+                    placeholder="IP Address"
+                    value={search.ip}
+                    onChange={e => setSearch({ ...search, ip: e.target.value })}
                 />
-                <input 
-                placeholder="Status Code" 
-                value={search.status} 
-                onChange={e => setSearch({ ...search, status: e.target.value })} 
-                />    
+                <input
+                    placeholder="Status Code"
+                    value={search.status}
+                    onChange={e => setSearch({ ...search, status: e.target.value })}
+                />
                 {/* <button onClick={handleSearch}>Search</button> */}
                 <button onClick={handleClear}>Clear</button>
             </div>

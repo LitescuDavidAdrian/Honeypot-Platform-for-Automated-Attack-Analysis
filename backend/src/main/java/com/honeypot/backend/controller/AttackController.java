@@ -37,11 +37,19 @@ public class AttackController {
     }
 
     @GetMapping("/search")
-    public List<Attack> search(
+    public Page<Attack> search(
             @RequestParam(required = false) String endpoint,
             @RequestParam(required = false) String ip,
-            @RequestParam(required = false) Integer status
+            @RequestParam(required = false) Integer status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "timestamp") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction
     ) {
-        return attackService.search(endpoint, ip, status);
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+        return attackService.search(endpoint, ip, status, pageable);
     }
 }

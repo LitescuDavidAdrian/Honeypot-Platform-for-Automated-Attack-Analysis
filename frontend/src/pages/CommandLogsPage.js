@@ -13,17 +13,24 @@ function CommandLogsPage() {
     const [totalPages, setTotalPages] = useState(0);
     const [search, setSearch] = useState({ command: '' });
 
-    const fetchLogs = () => {
-        getCommandLogs(page).then(res => {
-            setLogs(res.data.content);
-            setTotalPages(res.data.totalPages);
-        });
-    };
-
-    const handleSearch = () => {
-        const params = {};
+    const fetchData = (currentPage) => {
+        const hasSearch = search.command;
+        const params = {
+            page: currentPage,
+            size: 20
+        };
         if (search.command) params.command = search.command;
-        searchCommandLogs(params).then(res => setLogs(res.data));
+        if (hasSearch) {
+            searchCommandLogs(params).then(res => {
+                setLogs(res.data.content);
+                setTotalPages(res.data.totalPages);
+            });
+        } else {
+            getCommandLogs(currentPage).then(res => {
+                setLogs(res.data.content);
+                setTotalPages(res.data.totalPages);
+            });
+        }
     };
 
     const handleClear = () => {
@@ -31,25 +38,18 @@ function CommandLogsPage() {
         setPage(0);
     };
 
-    useEffect(() => { fetchLogs(); }, [page]);
+    useEffect(() => { fetchData(page); }, [page, search]);
 
-    useEffect(() => {
-        const hasSearch = search.command;
-        if (hasSearch) {
-            handleSearch();
-        } else {
-            fetchLogs();
-        }
-    }, [search]);
+    useEffect(() => { setPage(0); }, [search]);
 
     return (
         <div>
             <h2 style={{ color: '#e94560' }}>Command Logs</h2>
             <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
-                <input 
-                placeholder="Command" 
-                value={search.command}
-                onChange={e => setSearch({ ...search, command: e.target.value })} 
+                <input
+                    placeholder="Command"
+                    value={search.command}
+                    onChange={e => setSearch({ ...search, command: e.target.value })}
                 />
                 {/* <button onClick={handleSearch}>Search</button> */}
                 <button onClick={handleClear}>Clear</button>

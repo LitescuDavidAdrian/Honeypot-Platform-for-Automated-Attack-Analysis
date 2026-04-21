@@ -36,11 +36,19 @@ public class AuthLogController {
     }
 
     @GetMapping("/search")
-    public List<AuthLog> search(
+    public Page<AuthLog> search(
             @RequestParam(required = false) String username,
             @RequestParam(required = false) String ip,
-            @RequestParam(required = false) String status
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "timestamp") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction
     ) {
-        return authLogService.search(username, ip, status);
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+        return authLogService.search(username, ip, status, pageable);
     }
 }

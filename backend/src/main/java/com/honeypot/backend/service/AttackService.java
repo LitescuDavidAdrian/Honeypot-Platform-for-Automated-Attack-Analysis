@@ -21,7 +21,7 @@ public class AttackService {
         return attackRepository.findAll(pageable);
     }
 
-    public List<Attack> search(String endpoint, String ip, Integer status) {
-        return attackRepository.search(endpoint, ip, status);
+    public Page<Attack> search(String endpoint, String ip, Integer status, Pageable pageable) {
+        return attackRepository.search(endpoint, ip, status, pageable);
     }
 }
