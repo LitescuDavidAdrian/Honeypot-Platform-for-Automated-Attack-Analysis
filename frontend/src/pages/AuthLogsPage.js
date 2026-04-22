@@ -23,7 +23,7 @@ function AuthLogsPage() {
         if (search.ip) params.ip = search.ip;
         if (search.status) params.status = search.status;
 
-        if(hasSearch) {
+        if (hasSearch) {
             searchAuthLogs(params).then(res => {
                 setLogs(res.data.content);
                 setTotalPages(res.data.totalPages);
@@ -45,23 +45,31 @@ function AuthLogsPage() {
 
     useEffect(() => { setPage(0); }, [search]);
 
+    useEffect(() => {
+        const eventSource = new EventSource('http://localhost:8080/sse/subscribe');
+        eventSource.addEventListener('auth_logs', () => {
+            fetchData(page);
+        });
+        return () => eventSource.close();
+    }, [page, search]);
+
     return (
         <div>
             <h2 style={{ color: '#e94560' }}>Auth Logs</h2>
             <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
-                <input 
-                placeholder="Username" 
-                value={search.username}
-                onChange={e => setSearch({ ...search, username: e.target.value })} 
+                <input
+                    placeholder="Username"
+                    value={search.username}
+                    onChange={e => setSearch({ ...search, username: e.target.value })}
                 />
-                <input 
-                placeholder="IP Address" 
-                value={search.ip}
-                onChange={e => setSearch({ ...search, ip: e.target.value })} 
+                <input
+                    placeholder="IP Address"
+                    value={search.ip}
+                    onChange={e => setSearch({ ...search, ip: e.target.value })}
                 />
-                <input placeholder="Status" 
-                value={search.status}
-                onChange={e => setSearch({ ...search, status: e.target.value })}   
+                <input placeholder="Status"
+                    value={search.status}
+                    onChange={e => setSearch({ ...search, status: e.target.value })}
                 />
                 {/* <button onClick={handleSearch}>Search</button> */}
                 <button onClick={handleClear}>Clear</button>

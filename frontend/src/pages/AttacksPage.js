@@ -45,6 +45,14 @@ function AttacksPage() {
 
     useEffect(() => { setPage(0); }, [search]);
 
+    useEffect(() => {
+        const eventSource = new EventSource('http://localhost:8080/sse/subscribe');
+        eventSource.addEventListener('attacks', () => {
+            fetchData(page);
+        });
+        return () => eventSource.close();
+    }, [page, search]);
+
     return (
         <div>
             <h2 style={{ color: '#e94560' }}>Attacks</h2>
