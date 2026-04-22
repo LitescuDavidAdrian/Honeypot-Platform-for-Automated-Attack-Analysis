@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { getCommandLogs, searchCommandLogs } from '../services/api';
 
 const formatDate = (timestamp) => {
@@ -13,7 +13,7 @@ function CommandLogsPage() {
     const [totalPages, setTotalPages] = useState(0);
     const [search, setSearch] = useState({ command: '' });
 
-    const fetchData = (currentPage) => {
+    const fetchData = useCallback((currentPage) => {
         const hasSearch = search.command;
         const params = {
             page: currentPage,
@@ -31,14 +31,14 @@ function CommandLogsPage() {
                 setTotalPages(res.data.totalPages);
             });
         }
-    };
+    }, [search]);
 
     const handleClear = () => {
         setSearch({ command: '' });
         setPage(0);
     };
 
-    useEffect(() => { fetchData(page); }, [page, search]);
+    useEffect(() => { fetchData(page); }, [page, fetchData]);
 
     useEffect(() => { setPage(0); }, [search]);
 
@@ -48,7 +48,7 @@ function CommandLogsPage() {
             fetchData(page);
         });
         return () => eventSource.close();
-    }, [page, search]);
+    }, [page, search, fetchData]);
 
     return (
         <div>

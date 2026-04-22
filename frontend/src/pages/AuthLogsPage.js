@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState,  useCallback } from 'react';
 import { getAuthLogs, searchAuthLogs } from '../services/api';
 
 const formatDate = (timestamp) => {
@@ -13,7 +13,7 @@ function AuthLogsPage() {
     const [totalPages, setTotalPages] = useState(0);
     const [search, setSearch] = useState({ username: '', ip: '', status: '' });
 
-    const fetchData = (currentPage) => {
+    const fetchData = useCallback((currentPage) => {
         const hasSearch = search.username || search.ip || search.status;
         const params = {
             page: currentPage,
@@ -34,14 +34,14 @@ function AuthLogsPage() {
                 setTotalPages(res.data.totalPages);
             });
         }
-    }
+    }, [search]);
 
     const handleClear = () => {
         setSearch({ username: '', ip: '', status: '' });
         setPage(0);
     };
 
-    useEffect(() => { fetchData(page); }, [page, search]);
+    useEffect(() => { fetchData(page); }, [page, fetchData]);
 
     useEffect(() => { setPage(0); }, [search]);
 
@@ -51,7 +51,7 @@ function AuthLogsPage() {
             fetchData(page);
         });
         return () => eventSource.close();
-    }, [page, search]);
+    }, [page, search, fetchData]);
 
     return (
         <div>
