@@ -57,7 +57,7 @@ public class SseService {
                 PGConnection pgConn = conn.unwrap(PGConnection.class);
 
                 while (!Thread.currentThread().isInterrupted()) {
-                    PGNotification[] notifications = pgConn.getNotifications(3000);
+                    PGNotification[] notifications = pgConn.getNotifications(1000);
                     if (notifications != null) {
                         for (PGNotification notification : notifications) {
                             pushUpdate(notification.getName());
