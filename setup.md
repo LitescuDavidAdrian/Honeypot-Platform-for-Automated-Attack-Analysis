@@ -52,7 +52,7 @@ CREATE TABLE attacks (
 );
 
 CREATE TABLE auth_logs (
-    id SERIAL PRIMARY KEY,
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     timestamp TIMESTAMP,
     username TEXT,
     source_ip TEXT,
@@ -61,14 +61,41 @@ CREATE TABLE auth_logs (
 );
 
 CREATE TABLE command_logs (
-    id SERIAL PRIMARY KEY,
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     timestamp TIMESTAMP,
     command TEXT,
     raw_log TEXT
 );
 ```
 
-3. Allow the VM to connect to PostgreSQL:
+3. Create the PostgreSQL triggers for real-time SSE notifications:
+
+```sql
+CREATE OR REPLACE FUNCTION notify_insert()
+RETURNS trigger AS $$
+BEGIN
+    PERFORM pg_notify(TG_TABLE_NAME, 'insert');
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER attacks_notify
+AFTER INSERT ON attacks
+FOR EACH ROW EXECUTE FUNCTION notify_insert();
+
+CREATE TRIGGER auth_logs_notify
+AFTER INSERT ON auth_logs
+FOR EACH ROW EXECUTE FUNCTION notify_insert();
+
+CREATE TRIGGER command_logs_notify
+AFTER INSERT ON command_logs
+FOR EACH ROW EXECUTE FUNCTION notify_insert();
+```
+
+> These triggers fire a `pg_notify` event whenever a new row is inserted, which the Spring Boot backend listens for via PostgreSQL `LISTEN/NOTIFY` to push real-time updates to the frontend via SSE.
+
+
+4. Allow the VM to connect to PostgreSQL:
    - In `postgresql.conf`: set `listen_addresses = '*'`
    - In `pg_hba.conf`: add `host all all 10.0.2.0/24 md5` in `IPv4 local connections`
      > Use the whole subnet `10.0.2.0/24` instead of a single IP, because the VM is behind NAT and its IP can change.
