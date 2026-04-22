@@ -87,12 +87,20 @@ PostgreSQL Database
 - **Database:** PostgreSQL
 - **Architecture:** REST + JPA
 
-**Features:**
-- Real-time attack data visualization
-- Filtering and searching across all three log tables
-- SSH login attempt tracking with status classification
-- Command execution history
-- Web attack log analysis
+**Backend features:**
+- REST API endpoints for all three log tables (`/attacks`, `/auth-logs`, `/command-logs`)
+- Pagination and sorting on all endpoints
+- Partial search and filtering using native SQL `LIKE` queries
+- Real-time push notifications via SSE (Server-Sent Events) and PostgreSQL `LISTEN/NOTIFY`
+- Global CORS configuration for React frontend
+
+
+**Frontend features:**
+- Real-time dashboard that updates automatically when new attacks are detected
+- Separate pages for Attacks, Auth Logs and Command Logs
+- Live search with partial matching across all fields
+- Pagination with page reset on filter change
+- Formatted timestamps
 
 ---
 
@@ -139,7 +147,9 @@ sudo ./setup.sh
 
 ---
 
-### Manual honeypot Setup
+## Manual Setup
+
+### Honeypot Setup
 
 See [setup.md](setup.md) for the full step-by-step guide to setting up the honeypot on the Ubuntu VM, including Apache, Filebeat, Logstash, Auditd, OpenSSH, and PostgreSQL configuration.
 
@@ -154,7 +164,17 @@ The backend will start on `http://localhost:8080`.
 
 ### Frontend Setup
 
-WIP
+1. Navigate to the `frontend/` folder.
+2. Install dependencies:
+```bash
+npm install
+```
+3. Start the development server:
+```bash
+npm start
+```
+
+The frontend will start on `http://localhost:3000`. Make sure the backend is running first.
 
 ---
 
@@ -184,7 +204,6 @@ DB_PASSWORD=your_db_password
 
 ## TODO
 
-- [ ] Complete the React frontend
 - [ ] Add attack analysis and pattern detection
 - [ ] Live testing with Kali VM attacking the honeypot
 - [ ] Maybe add a keylogger
