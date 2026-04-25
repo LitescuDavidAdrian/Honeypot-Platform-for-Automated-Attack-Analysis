@@ -207,4 +207,3 @@ DB_PASSWORD=your_db_password
 - [ ] Add attack analysis and pattern detection
 - [ ] Live testing with Kali VM attacking the honeypot
 - [ ] Maybe add a keylogger
-- [ ] Change the system architecture diagram
