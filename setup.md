@@ -6,9 +6,11 @@ A hybrid honeypot with dynamic operational behavior. Low-interaction, built on U
 
 ## Architecture
 
-```
-TODO: Insert picture of the system architecture
-```
+<p align="center">
+  <img src="HoneypotSystemArchitecture.png" width="800"/>
+</p>
+
+---
 
 **Backend:** Java + Spring Boot
 **Frontend:** React  
