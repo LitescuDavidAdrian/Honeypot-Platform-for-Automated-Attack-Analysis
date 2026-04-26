@@ -231,14 +231,16 @@ filter {
       code => '
         msg = event.get("message")
         if msg
-          hex_match = msg.match(/cmd=([0-9A-Fa-f]+)/)
-          if hex_match
-            hex_str = hex_match[1]
-            decoded = [hex_str].pack("H*").encode("UTF-8", invalid: :replace, undef: :replace, replace: "?")
-            event.set("command", decoded)
-          else
-            quoted_match = msg.match(/cmd="([^"]+)"/)
-            event.set("command", quoted_match ? quoted_match[1] : nil)
+          if msg.include?("type=USER_CMD")
+            hex_match = msg.match(/cmd=([0-9A-Fa-f]+)/)
+            if hex_match
+              hex_str = hex_match[1]
+              decoded = [hex_str].pack("H*").encode("UTF-8", invalid: :replace, undef: :replace, replace: "?")
+              event.set("command", "sudo " + decoded)
+            else
+              quoted_match = msg.match(/cmd="([^"]+)"/)
+              event.set("command", "sudo " + quoted_match ? quoted_match[1] : nil)
+            end
           end
         end
       '
@@ -286,18 +288,20 @@ output {
     }
   } else if [log][file][path] == "/var/log/audit/audit.log" {
     if "type=USER_CMD" in [message] {
-      jdbc {
-        driver_jar_path => "/usr/share/logstash/postgresql-42.7.3.jar"
-        driver_class => "org.postgresql.Driver"
-        connection_string => "jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}"
-        username => "${DB_USER}"
-        password => "${DB_PASSWORD}"
-        statement => [
-          "INSERT INTO command_logs (timestamp, command, raw_log) VALUES (?::timestamp, ?, ?)",
-          "@timestamp",
-          "command",
-          "message"
-        ]
+      if [command] {
+        jdbc {
+          driver_jar_path => "/usr/share/logstash/postgresql-42.7.3.jar"
+          driver_class => "org.postgresql.Driver"
+          connection_string => "jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}"
+          username => "${DB_USER}"
+          password => "${DB_PASSWORD}"
+          statement => [
+            "INSERT INTO command_logs (timestamp, command, raw_log) VALUES (?::timestamp, ?, ?)",
+            "@timestamp",
+            "command",
+            "message"
+          ]
+        }
       }
     }
   }
