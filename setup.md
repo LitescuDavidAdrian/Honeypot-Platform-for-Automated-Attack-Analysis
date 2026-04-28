@@ -272,6 +272,19 @@ filter {
               quoted_match = msg.match(/cmd="([^"]+)"/)
               event.set("command", "sudo " + quoted_match ? quoted_match[1] : nil)
             end
+        elsif msg.include?("type=EXECVE") && msg.include?("local6")
+           a3_match = msg.match(/a3=([0-9A-Fa-f]+)/)
+           if a3_match
+             decoded = [a3_match[1]].pack("H*").encode("UTF-8", invalid: :replace, undef: :replace, replace: "?")
+             bash_cmd_match = decoded.match(/BASH_CMD: \w+ \[\d+\]: (.+)/)
+             if bash_cmd_match
+               command = bash_cmd_match[1]
+               event.set("command", command)
+               if command.start_with?("sudo ")
+                 event.set("is_sudo", "true")
+               end
+             end
+            end
           end
         end
       '
@@ -318,7 +331,7 @@ output {
       ]
     }
   } else if [log][file][path] == "/var/log/audit/audit.log" {
-    if "type=USER_CMD" in [message] {
+    if "type=USER_CMD" in [message] or ("local6" in [message] and [is_sudo] != "true") {
       if [command] {
         jdbc {
           driver_jar_path => "/usr/share/logstash/postgresql-42.7.3.jar"
