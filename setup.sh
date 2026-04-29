@@ -120,8 +120,28 @@ EOF
 systemctl restart auditd
 log "Auditd installed and configured."
 
+
 # -----------------------------------------------------------------------------
-# Step 5 — Install Filebeat
+# Step 5 — Configure Bash Command Logging
+# -----------------------------------------------------------------------------
+log "Configuring bash command logging..."
+
+# Add PROMPT_COMMAND to bash.bashrc if not already present
+if ! grep -q "BASH_CMD" /etc/bash.bashrc; then
+    echo "" >> /etc/bash.bashrc
+    echo "export PROMPT_COMMAND='logger -p local6.debug \"BASH_CMD: \$(whoami) [\$\$]: \$(history 1 | sed \"s/^[ ]*[0-9]*[ ]*//\")\"'" >> /etc/bash.bashrc
+fi
+
+# Configure rsyslog to write local6 to bash_commands.log
+cat > /etc/rsyslog.d/bash.conf << 'EOF'
+local6.* /var/log/bash_commands.log
+EOF
+
+systemctl restart rsyslog
+log "Bash command logging configured."
+
+# -----------------------------------------------------------------------------
+# Step 6 — Install Filebeat
 # -----------------------------------------------------------------------------
 log "Installing Filebeat..."
 
@@ -145,7 +165,7 @@ filebeat.inputs:
       - /var/log/audit/audit.log
       - /var/log/auth.log
     scan_frequency: 1s
-    close_inactive: 30s
+    close_inactive: 10s
 
 output.logstash:
   hosts: ["localhost:5044"]
@@ -157,7 +177,7 @@ systemctl enable filebeat
 log "Filebeat installed and configured."
 
 # -----------------------------------------------------------------------------
-# Step 6 — Install Logstash & JDBC Driver
+# Step 7 — Install Logstash & JDBC Driver
 # -----------------------------------------------------------------------------
 log "Installing Logstash..."
 apt install logstash -y
@@ -168,7 +188,7 @@ wget -q https://jdbc.postgresql.org/download/postgresql-42.7.3.jar -O /usr/share
 log "JDBC driver downloaded."
 
 # -----------------------------------------------------------------------------
-# Step 7 — Configure Logstash .env file
+# Step 8 — Configure Logstash .env file
 # -----------------------------------------------------------------------------
 log "Configuring Logstash environment variables..."
 
@@ -185,7 +205,7 @@ chown logstash:logstash /etc/logstash/.env
 log "Logstash .env file created and secured."
 
 # -----------------------------------------------------------------------------
-# Step 8 — Configure Logstash Pipeline
+# Step 9 — Configure Logstash Pipeline
 # -----------------------------------------------------------------------------
 log "Configuring Logstash pipeline..."
 
@@ -331,7 +351,7 @@ EOF
 log "Logstash pipeline configured."
 
 # -----------------------------------------------------------------------------
-# Step 9 — Secure the processes with systemd overrides
+# Step 10 — Secure the processes with systemd overrides
 # -----------------------------------------------------------------------------
 log "Configuring systemd overrides..."
 
@@ -373,7 +393,7 @@ systemctl daemon-reload
 log "Systemd overrides configured."
 
 # -----------------------------------------------------------------------------
-# Step 10 — Start all services
+# Step 11 — Start all services
 # -----------------------------------------------------------------------------
 log "Starting all services..."
 systemctl start logstash
@@ -381,7 +401,7 @@ systemctl start filebeat
 log "Services started."
 
 # -----------------------------------------------------------------------------
-# Step 11 — Make Logstash config immutable
+# Step 12 — Make Logstash config immutable
 # -----------------------------------------------------------------------------
 log "Making Logstash config immutable..."
 chattr +i /etc/logstash/conf.d/honeypot.conf
