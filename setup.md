@@ -132,7 +132,7 @@ filebeat.inputs:
       - /var/log/audit/audit.log
       - /var/log/auth.log
     scan_frequency: 1s
-    close_inactive: 30s
+    close_inactive: 10s
 
 output.logstash:
   hosts: ["localhost:5044"]
@@ -357,6 +357,7 @@ Key notes:
 - `?::timestamp` casts the Logstash `@timestamp` string to a PostgreSQL TIMESTAMP type.
 - `?::integer` casts the HTTP status code string to INTEGER.
 - The `_grokparsefailure` drop ensures malformed or irrelevant log lines are discarded.
+- Sudo commands are captured via `USER_CMD` with a `"sudo "` prefix. Regular user commands are captured via auditd EXECVE events for the `logger` process and deduplicated to avoid double-logging sudo commands.
 
 ---
 
@@ -399,7 +400,32 @@ sudo auditctl -s | grep enabled   # verify auditing is enabled
 
 ---
 
-## Step 8 — Install OpenSSH
+## Step 8 — Configure Bash Command Logging
+ 
+To capture all commands typed by real users (not just sudo commands), configure bash to log every command via syslog.
+ 
+1. Add to `/etc/bash.bashrc` at the very end:
+```bash
+export PROMPT_COMMAND='logger -p local6.debug "BASH_CMD: $(whoami) [$$]: $(history 1 | sed "s/^[ ]*[0-9]*[ ]*//")"'
+```
+ 
+2. Create `/etc/rsyslog.d/bash.conf`:
+```
+local6.* /var/log/bash_commands.log
+```
+ 
+3. Restart rsyslog:
+```bash
+sudo systemctl restart rsyslog
+```
+ 
+> This logs every command typed in a bash session to syslog. Logstash captures these via auditd's EXECVE events for the `logger` process, extracts the command from the hex-encoded `a3` argument, and inserts it into `command_logs`. Sudo commands are deduplicated — they are captured via `USER_CMD` and excluded from the bash logging path.
+ 
+> Note: Bash command logging only applies to new terminal sessions opened after `/etc/bash.bashrc` has been modified.
+ 
+---
+
+## Step 9 — Install OpenSSH
 
 ```bash
 sudo apt install openssh-server -y
@@ -419,7 +445,7 @@ sudo systemctl restart sshd
 
 ---
 
-## Step 9 — SSH Login Tracking
+## Step 10 — SSH Login Tracking
 
 SSH login attempts are tracked via `auth.log` and stored in the `auth_logs` table. The `status` column has the following values:
 
@@ -438,7 +464,7 @@ ssh ubuntu@localhost        # SUCCESS (correct password) or FAILED (wrong passwo
 
 ---
 
-## Step 10 — Secure the Processes
+## Step 11 — Secure the Processes
 
 Make Logstash, Filebeat, and Auditd restart automatically and refuse manual stops.
 
