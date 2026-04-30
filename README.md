@@ -62,7 +62,7 @@ Spring Boot Honeypot Platform
 |---|---|
 | `attacks` | HTTP requests to the Apache web server |
 | `auth_logs` | SSH login attempts (FAILED, INVALID_USER, SUCCESS, DISCONNECTED) |
-| `command_logs` | Commands executed on the system via sudo |
+| `command_logs` | Commands executed on the system (sudo and regular user commands) |
 
 ### Part 2 — Web Dashboard
 
@@ -125,6 +125,7 @@ The script installs and configures all required components:
 - Auditd (with command tracking rules)
 - Filebeat (real-time log shipping)
 - Logstash (log parsing and database ingestion)
+- Rsyslog (bash command logging via PROMPT_COMMAND)
 - PostgreSQL JDBC driver
 
 It also applies several security and resilience measures:
@@ -206,4 +207,3 @@ DB_PASSWORD=your_db_password
 
 - [ ] Add attack analysis and pattern detection
 - [ ] Live testing with Kali VM attacking the honeypot
-- [ ] Maybe add a keylogger
