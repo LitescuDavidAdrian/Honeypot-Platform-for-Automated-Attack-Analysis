@@ -113,7 +113,7 @@ cat > /etc/audit/rules.d/audit.rules << 'EOF'
 -f 1
 
 -e 1
--a always,exit -F arch=b64 -S execve -k user_commands
+-a always,exit -F arch=b64 -S execve -F auid=1000 -F uid=1000 -k user_commands
 -e 2
 EOF
 
