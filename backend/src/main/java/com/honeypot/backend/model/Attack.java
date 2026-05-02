@@ -31,6 +31,9 @@ public class Attack {
     @Column(name = "raw_log")
     private String rawLog;
 
+    @Column(name = "payload")
+    private String payload;
+
     // Constructors
     public Attack() {
 
@@ -95,5 +98,13 @@ public class Attack {
 
     public void setRawLog(String rawLog) {
         this.rawLog = rawLog;
+    }
+
+    public String getPayload() {
+        return payload;
+    }
+
+    public void setPayload(String payload) {
+        this.payload = payload;
     }
 }

@@ -12,6 +12,7 @@ function AttacksPage() {
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [search, setSearch] = useState({ endpoint: '', ip: '', status: '' });
+    const [selectedAttack, setSelectedAttack] = useState(null);
 
     const fetchData = useCallback((currentPage) => {
         const hasSearch = search.endpoint || search.ip || search.status;
@@ -53,6 +54,14 @@ function AttacksPage() {
         return () => eventSource.close();
     }, [page, search, fetchData]);
 
+    useEffect(() => {
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') setSelectedAttack(null);
+        };
+        window.addEventListener('keydown', handleEscape);
+        return () => window.removeEventListener('keydown', handleEscape);
+    }, []);
+
     return (
         <div>
             <h2 style={{ color: '#e94560' }}>Attacks</h2>
@@ -72,7 +81,6 @@ function AttacksPage() {
                     value={search.status}
                     onChange={e => setSearch({ ...search, status: e.target.value })}
                 />
-                {/* <button onClick={handleSearch}>Search</button> */}
                 <button onClick={handleClear}>Clear</button>
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -84,6 +92,7 @@ function AttacksPage() {
                         <th>Endpoint</th>
                         <th>Status</th>
                         <th>User Agent</th>
+                        <th>Details</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -95,6 +104,9 @@ function AttacksPage() {
                             <td>{a.endpoint}</td>
                             <td>{a.statusCode}</td>
                             <td>{a.userAgent}</td>
+                            <td>
+                                <button onClick={() => setSelectedAttack(a)}>View</button>
+                            </td>
                         </tr>
                     ))}
                 </tbody>
@@ -104,6 +116,42 @@ function AttacksPage() {
                 <span>Page {page + 1} of {totalPages}</span>
                 <button onClick={() => setPage(p => Math.min(p + 1, totalPages - 1))} disabled={page === totalPages - 1}>Next</button>
             </div>
+
+            {selectedAttack && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex',
+                    justifyContent: 'center', alignItems: 'center', zIndex: 1000
+                }}>
+                    <div style={{
+                        backgroundColor: '#ffffff', padding: '30px', borderRadius: '8px',
+                        maxWidth: '700px', width: '90%', maxHeight: '80vh', overflowY: 'auto'
+                    }}>
+                        <h3 style={{ color: '#1a1a2e', marginTop: 0 }}>Attack Details</h3>
+
+                        <h4 style={{ color: '#1a1a2e', marginBottom: '5px' }}>Raw Log</h4>
+                        <pre style={{
+                            backgroundColor: '#f4f4f4', padding: '15px', borderRadius: '4px',
+                            whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontSize: '13px'
+                        }}>
+                            {selectedAttack.rawLog}
+                        </pre>
+
+                        <h4 style={{ color: '#1a1a2e', marginBottom: '5px' }}>Payload</h4>
+                        <pre style={{
+                            backgroundColor: '#f4f4f4', padding: '15px', borderRadius: '4px',
+                            whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontSize: '13px'
+                        }}>
+                            {selectedAttack.payload || '(no payload - likely a GET request)'}
+                        </pre>
+
+                        <button onClick={() => setSelectedAttack(null)}
+                            style={{ marginTop: '15px', backgroundColor: '#e94560', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}>
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
