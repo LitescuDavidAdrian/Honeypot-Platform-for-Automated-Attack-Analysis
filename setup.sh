@@ -460,11 +460,12 @@ systemctl start filebeat
 log "Services started."
 
 # -----------------------------------------------------------------------------
-# Step 13 — Make Logstash config immutable
+# Step 13 — Make Logstash and Filebeat configs immutable
 # -----------------------------------------------------------------------------
-log "Making Logstash config immutable..."
+log "Making Logstash and Filebeat configs immutable..."
 chattr +i /etc/logstash/conf.d/honeypot.conf
-log "Logstash config is now immutable."
+chattr +i /etc/filebeat/filebeat.yml
+log "Logstash and Filebeat configs are now immutable."
 
 # -----------------------------------------------------------------------------
 # Done
@@ -483,5 +484,5 @@ echo "  - Logstash: $(systemctl is-active logstash)"
 echo ""
 warn "Note: Logstash takes 1-2 minutes to fully start up."
 warn "Note: Bash command logging only applies to new terminal sessions."
-warn "Note: To edit honeypot.conf, first run: sudo chattr -i /etc/logstash/conf.d/honeypot.conf"
+warn "Note: To edit honeypot.conf or filebeat.yml, first run: sudo chattr -i <file>"
 echo ""

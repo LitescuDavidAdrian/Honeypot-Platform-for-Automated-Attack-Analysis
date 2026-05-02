@@ -589,16 +589,19 @@ Reload and restart all services:
 sudo systemctl daemon-reload
 ```
 
-Make the Logstash config file immutable so it cannot be modified or deleted even by root:
+Make the Logstash and Filebeat config files immutable so they cannot be modified or deleted even by root:
 ```bash
 sudo chattr +i /etc/logstash/conf.d/honeypot.conf
+sudo chattr +i /etc/filebeat/filebeat.yml
 ```
 
 To temporarily remove the immutable flag when you need to make changes:
 ```bash
 sudo chattr -i /etc/logstash/conf.d/honeypot.conf
+sudo chattr -i /etc/filebeat/filebeat.yml
 # make your changes
 sudo chattr +i /etc/logstash/conf.d/honeypot.conf
+sudo chattr +i /etc/filebeat/filebeat.yml
 ```
 
 > Even if an attacker gets root access, logs are already being shipped to the external database in real time. The few seconds shipping window makes it extremely difficult to cover tracks.

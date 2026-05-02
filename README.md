@@ -138,7 +138,7 @@ It also applies several security and resilience measures:
 - Enables automatic service restart (`Restart=always`)
 - Prevents manual stopping of critical services (`RefuseManualStop=yes`)
 - Locks Auditd rules to prevent tampering (`-e 2`)
-- Makes the Logstash pipeline configuration immutable (`chattr +i`)
+- Makes the Logstash pipeline and Filebeat configurations immutable (`chattr +i`)
 
 ### Usage
 
@@ -201,7 +201,7 @@ DB_PASSWORD=your_db_password
 - Database credentials are stored in `.env` and never hardcoded
 - Logstash, Filebeat, and Auditd are configured to restart automatically and refuse manual stops
 - Audit rules are locked with `-e 2` — cannot be modified without a reboot
-- The Logstash config file is made immutable with `chattr +i`
+- The Logstash and Filebeat config files are made immutable with `chattr +i`
 - Logs are shipped to the external database in real time, making it extremely difficult for an attacker to cover their tracks even with root access
 
 ---
