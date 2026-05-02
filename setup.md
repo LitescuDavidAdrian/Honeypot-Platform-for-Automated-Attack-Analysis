@@ -50,7 +50,8 @@ CREATE TABLE attacks (
     endpoint TEXT,
     status_code INTEGER,
     user_agent TEXT,
-    raw_log TEXT
+    raw_log TEXT,
+    payload TEXT
 );
 
 CREATE TABLE auth_logs (
@@ -85,6 +86,10 @@ CREATE TRIGGER attacks_notify
 AFTER INSERT ON attacks
 FOR EACH ROW EXECUTE FUNCTION notify_insert();
 
+CREATE TRIGGER attacks_update_notify
+AFTER UPDATE ON attacks
+FOR EACH ROW EXECUTE FUNCTION notify_insert();
+
 CREATE TRIGGER auth_logs_notify
 AFTER INSERT ON auth_logs
 FOR EACH ROW EXECUTE FUNCTION notify_insert();
@@ -94,7 +99,7 @@ AFTER INSERT ON command_logs
 FOR EACH ROW EXECUTE FUNCTION notify_insert();
 ```
 
-> These triggers fire a `pg_notify` event whenever a new row is inserted, which the Spring Boot backend listens for via PostgreSQL `LISTEN/NOTIFY` to push real-time updates to the frontend via SSE.
+> These triggers fire a `pg_notify` event whenever a new row is inserted or updated, which the Spring Boot backend listens for via PostgreSQL `LISTEN/NOTIFY` to push real-time updates to the frontend via SSE. The UPDATE trigger on the attacks table ensures the frontend updates instantly when ModSecurity adds the payload to a request.
 
 
 4. Allow the VM to connect to PostgreSQL:
@@ -117,7 +122,44 @@ Logs are written to:
 
 ---
 
-## Step 3 — Install Filebeat
+## Step 3 — Install and Configure ModSecurity
+ 
+ModSecurity is a Web Application Firewall (WAF) module for Apache that captures full HTTP request bodies, including POST payloads. This allows the honeypot to capture attack payloads (SQL injection, XSS, command injection etc.) instead of just URLs.
+ 
+```bash
+sudo apt install libapache2-mod-security2 -y
+sudo a2enmod security2
+```
+ 
+Set up the ModSecurity config:
+ 
+```bash
+sudo cp /etc/modsecurity/modsecurity.conf-recommended /etc/modsecurity/modsecurity.conf
+sudo nano /etc/modsecurity/modsecurity.conf
+```
+ 
+Make the following changes:
+- Change `SecRuleEngine DetectionOnly` to `SecRuleEngine On`
+- Change `SecAuditEngine RelevantOnly` to `SecAuditEngine On`
+- Confirm `SecAuditLogParts` includes `I` (request body) — for example: `SecAuditLogParts ABIJDEFHZ`
+- Confirm `SecAuditLog /var/log/apache2/modsec_audit.log`
+- Confirm `SecAuditLogType Serial`
+Restart Apache:
+```bash
+sudo systemctl restart apache2
+```
+ 
+Test with a POST request:
+```bash
+curl -X POST -d "username=admin&password=test123" http://localhost
+sudo tail -50 /var/log/apache2/modsec_audit.log
+```
+ 
+You should see the request body inside section `--<id>-C--` of the audit log.
+ 
+---
+
+## Step 4 — Install Filebeat
 
 1. Add the Elastic repository and install Filebeat.
 2. Configure `/etc/filebeat/filebeat.yml`:
@@ -132,7 +174,17 @@ filebeat.inputs:
       - /var/log/audit/audit.log
       - /var/log/auth.log
     scan_frequency: 1s
-    close_inactive: 10s
+    close_inactive: 1s
+
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/apache2/modsec_audit.log
+    scan_frequency: 1s
+    close_inactive: 1s
+    multiline.pattern: '^--[a-f0-9]+-A--'
+    multiline.negate: true
+    multiline.match: after
 
 output.logstash:
   hosts: ["localhost:5044"]
@@ -140,11 +192,11 @@ output.logstash:
   timeout: 5
 ```
 
-> `bulk_max_size: 1` and `timeout: 5` are key for reducing shipping delay.
+> `bulk_max_size: 1` and `timeout: 5` are key for reducing shipping delay. The multiline configuration on `modsec_audit.log` ensures each ModSecurity transaction (which spans multiple lines) is treated as a single event.
 
 ---
 
-## Step 4 — Install Logstash & JDBC Driver
+## Step 5 — Install Logstash & JDBC Driver
 
 ```bash
 sudo apt install logstash -y
@@ -154,7 +206,7 @@ sudo wget https://jdbc.postgresql.org/download/postgresql-42.7.3.jar
 
 ---
 
-## Step 5 — Configure Environment Variables
+## Step 6 — Configure Environment Variables
 
 Instead of hardcoding database credentials in the Logstash config, store them in an environment file.
 
@@ -209,7 +261,7 @@ sudo systemctl daemon-reload
 
 ---
 
-## Step 6 — Configure Logstash Pipeline
+## Step 7 — Configure Logstash Pipeline
 
 Create `/etc/logstash/conf.d/honeypot.conf`:
 
@@ -219,7 +271,7 @@ input {
     port => 5044
   }
 }
-
+ 
 filter {
   if [log][file][path] == "/var/log/apache2/access.log" {
     grok {
@@ -232,13 +284,13 @@ filter {
         "message" => [
           # Failed login attempt
           "%{SYSLOGTIMESTAMP:log_timestamp} %{NOTSPACE:hostname} sshd\[%{POSINT:pid}\]: Failed %{WORD:auth_method} for (?:invalid user )?%{WORD:username} from %{IPV4:source_ip}",
-
+ 
           # Invalid user
           "%{SYSLOGTIMESTAMP:log_timestamp} %{NOTSPACE:hostname} sshd\[%{POSINT:pid}\]: Invalid user %{WORD:username} from %{IPV4:source_ip}",
-
+ 
           # Successful login
           "%{SYSLOGTIMESTAMP:log_timestamp} %{NOTSPACE:hostname} sshd\[%{POSINT:pid}\]: Accepted %{WORD:auth_method} for %{WORD:username} from %{IPV4:source_ip}",
-
+ 
           # User disconnected
           "%{SYSLOGTIMESTAMP:log_timestamp} %{NOTSPACE:hostname} sshd\[%{POSINT:pid}\]: (?:Disconnected from|Connection closed by) (?:invalid user |authenticating user |user )?%{WORD:username} %{IPV4:source_ip}"
         ]
@@ -256,7 +308,7 @@ filter {
     } else {
       mutate { add_field => { "status" => "OTHER" } }
     }
-
+ 
   } else if [log][file][path] == "/var/log/audit/audit.log" {
     ruby {
       code => '
@@ -270,31 +322,60 @@ filter {
               event.set("command", "sudo " + decoded)
             else
               quoted_match = msg.match(/cmd="([^"]+)"/)
-              event.set("command", "sudo " + quoted_match ? quoted_match[1] : nil)
+              event.set("command", quoted_match ? "sudo " + quoted_match[1] : nil)
             end
-        elsif msg.include?("type=EXECVE") && msg.include?("local6")
-           a3_match = msg.match(/a3=([0-9A-Fa-f]+)/)
-           if a3_match
-             decoded = [a3_match[1]].pack("H*").encode("UTF-8", invalid: :replace, undef: :replace, replace: "?")
-             bash_cmd_match = decoded.match(/BASH_CMD: \w+ \[\d+\]: (.+)/)
-             if bash_cmd_match
-               command = bash_cmd_match[1]
-               event.set("command", command)
-               if command.start_with?("sudo ")
-                 event.set("is_sudo", "true")
-               end
-             end
+          elsif msg.include?("type=EXECVE") && msg.include?("local6")
+            a3_match = msg.match(/a3=([0-9A-Fa-f]+)/)
+            if a3_match
+              decoded = [a3_match[1]].pack("H*").encode("UTF-8", invalid: :replace, undef: :replace, replace: "?")
+              bash_cmd_match = decoded.match(/BASH_CMD: \w+ \[\d+\]: (.+)/)
+              if bash_cmd_match
+                command = bash_cmd_match[1]
+                event.set("command", command)
+                if command.start_with?("sudo ")
+                  event.set("is_sudo", "true")
+                end
+              end
             end
           end
         end
       '
     }
+ 
+  } else if [log][file][path] == "/var/log/apache2/modsec_audit.log" {
+    ruby {
+      code => '
+        msg = event.get("message")
+        if msg
+          # Extract section A (timestamp and connection info)
+          a_match = msg.match(/--[a-f0-9]+-A--\n\[([^\]]+)\] \S+ (\S+) \d+ \S+ \d+/)
+          if a_match
+            event.set("modsec_timestamp", a_match[1])
+            event.set("modsec_ip", a_match[2])
+          end
+ 
+          # Extract section B (request line)
+          b_match = msg.match(/--[a-f0-9]+-B--\n(\S+) (\S+) \S+/)
+          if b_match
+            event.set("modsec_method", b_match[1])
+            event.set("modsec_endpoint", b_match[2])
+          end
+ 
+          # Extract section C (request body / payload)
+          c_match = msg.match(/--[a-f0-9]+-C--\n(.+?)\n--[a-f0-9]+-[A-Z]--/m)
+          if c_match
+            event.set("payload", c_match[1].strip)
+          end
+        end
+      '
+    }
   }
+ 
   if "_grokparsefailure" in [tags] {
     drop { }
   }
 }
-
+ 
 output {
   if [log][file][path] == "/var/log/apache2/access.log" {
     jdbc {
@@ -348,6 +429,22 @@ output {
         }
       }
     }
+  } else if [log][file][path] == "/var/log/apache2/modsec_audit.log" {
+    if [payload] and [modsec_ip] and [modsec_endpoint] {
+      jdbc {
+        driver_jar_path => "/usr/share/logstash/postgresql-42.7.3.jar"
+        driver_class => "org.postgresql.Driver"
+        connection_string => "jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}"
+        username => "${DB_USER}"
+        password => "${DB_PASSWORD}"
+        statement => [
+          "UPDATE attacks SET payload = ? WHERE attacker_ip = ? AND endpoint = ? AND payload IS NULL AND timestamp >= NOW() - INTERVAL '10 seconds'",
+          "payload",
+          "modsec_ip",
+          "modsec_endpoint"
+        ]
+      }
+    }
   }
 }
 ```
@@ -358,10 +455,11 @@ Key notes:
 - `?::integer` casts the HTTP status code string to INTEGER.
 - The `_grokparsefailure` drop ensures malformed or irrelevant log lines are discarded.
 - Sudo commands are captured via `USER_CMD` with a `"sudo "` prefix. Regular user commands are captured via auditd EXECVE events for the `logger` process and deduplicated to avoid double-logging sudo commands.
+- POST payloads are captured by ModSecurity into `modsec_audit.log`, parsed by Logstash, and used to UPDATE the matching `attacks` row by `attacker_ip`, `endpoint` and recent timestamp. The PostgreSQL UPDATE trigger then fires an SSE event so the dashboard refreshes with the payload.
 
 ---
 
-## Step 7 — Install and Configure Auditd
+## Step 8 — Install and Configure Auditd
 
 ```bash
 sudo apt install auditd audispd-plugins -y
@@ -400,7 +498,7 @@ sudo auditctl -s | grep enabled   # verify auditing is enabled
 
 ---
 
-## Step 8 — Configure Bash Command Logging
+## Step 9 — Configure Bash Command Logging
  
 To capture all commands typed by real users (not just sudo commands), configure bash to log every command via syslog.
  
@@ -425,7 +523,7 @@ sudo systemctl restart rsyslog
  
 ---
 
-## Step 9 — Install OpenSSH
+## Step 10 — Install OpenSSH
 
 ```bash
 sudo apt install openssh-server -y
@@ -445,7 +543,7 @@ sudo systemctl restart sshd
 
 ---
 
-## Step 10 — SSH Login Tracking
+## Step 11 — SSH Login Tracking
 
 SSH login attempts are tracked via `auth.log` and stored in the `auth_logs` table. The `status` column has the following values:
 
@@ -464,11 +562,11 @@ ssh ubuntu@localhost        # SUCCESS (correct password) or FAILED (wrong passwo
 
 ---
 
-## Step 11 — Secure the Processes
+## Step 12 — Secure the Processes
 
 Make Logstash, Filebeat, and Auditd restart automatically and refuse manual stops.
 
-The Logstash override was already created in Step 5. For Filebeat and Auditd:
+The Logstash override was already created in Step 6. For Filebeat and Auditd:
 
 ```bash
 sudo systemctl edit filebeat

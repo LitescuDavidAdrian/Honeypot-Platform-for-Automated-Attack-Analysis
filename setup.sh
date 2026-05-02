@@ -73,7 +73,24 @@ systemctl start apache2
 log "Apache installed and running."
 
 # -----------------------------------------------------------------------------
-# Step 3 — Install OpenSSH
+# Step 3 — Install and Configure ModSecurity
+# -----------------------------------------------------------------------------
+log "Installing ModSecurity..."
+apt install libapache2-mod-security2 -y
+a2enmod security2
+
+# Set up ModSecurity config
+cp /etc/modsecurity/modsecurity.conf-recommended /etc/modsecurity/modsecurity.conf
+
+# Enable rule engine and audit engine, ensure request body is logged
+sed -i 's/^SecRuleEngine DetectionOnly/SecRuleEngine On/' /etc/modsecurity/modsecurity.conf
+sed -i 's/^SecAuditEngine RelevantOnly/SecAuditEngine On/' /etc/modsecurity/modsecurity.conf
+
+systemctl restart apache2
+log "ModSecurity installed and configured."
+
+# -----------------------------------------------------------------------------
+# Step 4 — Install OpenSSH
 # -----------------------------------------------------------------------------
 log "Installing OpenSSH..."
 apt install openssh-server -y
@@ -91,7 +108,7 @@ systemctl restart sshd
 log "OpenSSH installed and configured."
 
 # -----------------------------------------------------------------------------
-# Step 4 — Install Auditd
+# Step 5 — Install Auditd
 # -----------------------------------------------------------------------------
 log "Installing Auditd..."
 apt install auditd audispd-plugins -y
@@ -122,7 +139,7 @@ log "Auditd installed and configured."
 
 
 # -----------------------------------------------------------------------------
-# Step 5 — Configure Bash Command Logging
+# Step 6 — Configure Bash Command Logging
 # -----------------------------------------------------------------------------
 log "Configuring bash command logging..."
 
@@ -141,7 +158,7 @@ systemctl restart rsyslog
 log "Bash command logging configured."
 
 # -----------------------------------------------------------------------------
-# Step 6 — Install Filebeat
+# Step 7 — Install Filebeat
 # -----------------------------------------------------------------------------
 log "Installing Filebeat..."
 
@@ -165,7 +182,17 @@ filebeat.inputs:
       - /var/log/audit/audit.log
       - /var/log/auth.log
     scan_frequency: 1s
-    close_inactive: 10s
+    close_inactive: 1s
+
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/apache2/modsec_audit.log
+    scan_frequency: 1s
+    close_inactive: 1s
+    multiline.pattern: '^--[a-f0-9]+-A--'
+    multiline.negate: true
+    multiline.match: after
 
 output.logstash:
   hosts: ["localhost:5044"]
@@ -177,7 +204,7 @@ systemctl enable filebeat
 log "Filebeat installed and configured."
 
 # -----------------------------------------------------------------------------
-# Step 7 — Install Logstash & JDBC Driver
+# Step 8 — Install Logstash & JDBC Driver
 # -----------------------------------------------------------------------------
 log "Installing Logstash..."
 apt install logstash -y
@@ -188,7 +215,7 @@ wget -q https://jdbc.postgresql.org/download/postgresql-42.7.3.jar -O /usr/share
 log "JDBC driver downloaded."
 
 # -----------------------------------------------------------------------------
-# Step 8 — Configure Logstash .env file
+# Step 9 — Configure Logstash .env file
 # -----------------------------------------------------------------------------
 log "Configuring Logstash environment variables..."
 
@@ -205,7 +232,7 @@ chown logstash:logstash /etc/logstash/.env
 log "Logstash .env file created and secured."
 
 # -----------------------------------------------------------------------------
-# Step 9 — Configure Logstash Pipeline
+# Step 10 — Configure Logstash Pipeline
 # -----------------------------------------------------------------------------
 log "Configuring Logstash pipeline..."
 
@@ -226,16 +253,9 @@ filter {
     grok {
       match => {
         "message" => [
-          # Failed login attempt
           "%{SYSLOGTIMESTAMP:log_timestamp} %{NOTSPACE:hostname} sshd\[%{POSINT:pid}\]: Failed %{WORD:auth_method} for (?:invalid user )?%{WORD:username} from %{IPV4:source_ip}",
-
-          # Invalid user
           "%{SYSLOGTIMESTAMP:log_timestamp} %{NOTSPACE:hostname} sshd\[%{POSINT:pid}\]: Invalid user %{WORD:username} from %{IPV4:source_ip}",
-
-          # Successful login
           "%{SYSLOGTIMESTAMP:log_timestamp} %{NOTSPACE:hostname} sshd\[%{POSINT:pid}\]: Accepted %{WORD:auth_method} for %{WORD:username} from %{IPV4:source_ip}",
-
-          # User disconnected
           "%{SYSLOGTIMESTAMP:log_timestamp} %{NOTSPACE:hostname} sshd\[%{POSINT:pid}\]: (?:Disconnected from|Connection closed by) (?:invalid user |authenticating user |user )?%{WORD:username} %{IPV4:source_ip}"
         ]
       }
@@ -252,7 +272,6 @@ filter {
     } else {
       mutate { add_field => { "status" => "OTHER" } }
     }
-
   } else if [log][file][path] == "/var/log/audit/audit.log" {
     ruby {
       code => '
@@ -266,21 +285,45 @@ filter {
               event.set("command", "sudo " + decoded)
             else
               quoted_match = msg.match(/cmd="([^"]+)"/)
-              event.set("command", "sudo " + quoted_match ? quoted_match[1] : nil)
+              event.set("command", quoted_match ? "sudo " + quoted_match[1] : nil)
             end
-        elsif msg.include?("type=EXECVE") && msg.include?("local6")
-           a3_match = msg.match(/a3=([0-9A-Fa-f]+)/)
-           if a3_match
-             decoded = [a3_match[1]].pack("H*").encode("UTF-8", invalid: :replace, undef: :replace, replace: "?")
-             bash_cmd_match = decoded.match(/BASH_CMD: \w+ \[\d+\]: (.+)/)
-             if bash_cmd_match
-               command = bash_cmd_match[1]
-               event.set("command", command)
-               if command.start_with?("sudo ")
-                 event.set("is_sudo", "true")
-               end
-             end
+          elsif msg.include?("type=EXECVE") && msg.include?("local6")
+            a3_match = msg.match(/a3=([0-9A-Fa-f]+)/)
+            if a3_match
+              decoded = [a3_match[1]].pack("H*").encode("UTF-8", invalid: :replace, undef: :replace, replace: "?")
+              bash_cmd_match = decoded.match(/BASH_CMD: \w+ \[\d+\]: (.+)/)
+              if bash_cmd_match
+                command = bash_cmd_match[1]
+                event.set("command", command)
+                if command.start_with?("sudo ")
+                  event.set("is_sudo", "true")
+                end
+              end
             end
+          end
+        end
+      '
+    }
+  } else if [log][file][path] == "/var/log/apache2/modsec_audit.log" {
+    ruby {
+      code => '
+        msg = event.get("message")
+        if msg
+          a_match = msg.match(/--[a-f0-9]+-A--\n\[([^\]]+)\] \S+ (\S+) \d+ \S+ \d+/)
+          if a_match
+            event.set("modsec_timestamp", a_match[1])
+            event.set("modsec_ip", a_match[2])
+          end
+
+          b_match = msg.match(/--[a-f0-9]+-B--\n(\S+) (\S+) \S+/)
+          if b_match
+            event.set("modsec_method", b_match[1])
+            event.set("modsec_endpoint", b_match[2])
+          end
+
+          c_match = msg.match(/--[a-f0-9]+-C--\n(.+?)\n--[a-f0-9]+-[A-Z]--/m)
+          if c_match
+            event.set("payload", c_match[1].strip)
           end
         end
       '
@@ -344,6 +387,22 @@ output {
         }
       }
     }
+  } else if [log][file][path] == "/var/log/apache2/modsec_audit.log" {
+    if [payload] and [modsec_ip] and [modsec_endpoint] {
+      jdbc {
+        driver_jar_path => "/usr/share/logstash/postgresql-42.7.3.jar"
+        driver_class => "org.postgresql.Driver"
+        connection_string => "jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}"
+        username => "${DB_USER}"
+        password => "${DB_PASSWORD}"
+        statement => [
+          "UPDATE attacks SET payload = ? WHERE attacker_ip = ? AND endpoint = ? AND payload IS NULL AND timestamp >= NOW() - INTERVAL '10 seconds'",
+          "payload",
+          "modsec_ip",
+          "modsec_endpoint"
+        ]
+      }
+    }
   }
 }
 EOF
@@ -351,7 +410,7 @@ EOF
 log "Logstash pipeline configured."
 
 # -----------------------------------------------------------------------------
-# Step 10 — Secure the processes with systemd overrides
+# Step 11 — Secure the processes with systemd overrides
 # -----------------------------------------------------------------------------
 log "Configuring systemd overrides..."
 
@@ -393,7 +452,7 @@ systemctl daemon-reload
 log "Systemd overrides configured."
 
 # -----------------------------------------------------------------------------
-# Step 11 — Start all services
+# Step 12 — Start all services
 # -----------------------------------------------------------------------------
 log "Starting all services..."
 systemctl start logstash
@@ -401,7 +460,7 @@ systemctl start filebeat
 log "Services started."
 
 # -----------------------------------------------------------------------------
-# Step 12 — Make Logstash config immutable
+# Step 13 — Make Logstash config immutable
 # -----------------------------------------------------------------------------
 log "Making Logstash config immutable..."
 chattr +i /etc/logstash/conf.d/honeypot.conf
@@ -423,5 +482,6 @@ echo "  - Filebeat: $(systemctl is-active filebeat)"
 echo "  - Logstash: $(systemctl is-active logstash)"
 echo ""
 warn "Note: Logstash takes 1-2 minutes to fully start up."
+warn "Note: Bash command logging only applies to new terminal sessions."
 warn "Note: To edit honeypot.conf, first run: sudo chattr -i /etc/logstash/conf.d/honeypot.conf"
 echo ""

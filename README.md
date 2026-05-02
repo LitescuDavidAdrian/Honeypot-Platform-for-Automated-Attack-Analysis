@@ -33,7 +33,7 @@ Attacker
 Vulnerable Web App (Apache) / SSH Service
    │
    ▼
-System Logs (access.log / auth.log / audit.log)
+System Logs (access.log / auth.log / audit.log / modsec_audit.log)
    │
    ▼
 Filebeat
@@ -54,13 +54,14 @@ Spring Boot Honeypot Platform
 - **Auditd** — tracks all commands executed on the system
 - **Filebeat** — ships logs in real time to Logstash
 - **Logstash** — parses logs and forwards them to PostgreSQL
+- **ModSecurity** — Web Application Firewall that captures full HTTP request bodies (payloads)
 - **PostgreSQL** — external database storing all captured attack data
 
 **Data captured:**
 
 | Table | Description |
 |---|---|
-| `attacks` | HTTP requests to the Apache web server |
+| `attacks` | HTTP requests to the Apache web server, including request payloads (POST bodies) |
 | `auth_logs` | SSH login attempts (FAILED, INVALID_USER, SUCCESS, DISCONNECTED) |
 | `command_logs` | Commands executed on the system (sudo and regular user commands) |
 
@@ -101,6 +102,7 @@ PostgreSQL Database
 - Live search with partial matching across all fields
 - Pagination with page reset on filter change
 - Formatted timestamps
+- View Details popup showing raw log and request payload (closeable with Escape key)
 
 ---
 
@@ -126,6 +128,7 @@ The script installs and configures all required components:
 - Filebeat (real-time log shipping)
 - Logstash (log parsing and database ingestion)
 - Rsyslog (bash command logging via PROMPT_COMMAND)
+- ModSecurity (Apache WAF for capturing request payloads)
 - PostgreSQL JDBC driver
 
 It also applies several security and resilience measures:
