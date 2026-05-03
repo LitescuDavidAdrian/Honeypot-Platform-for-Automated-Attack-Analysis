@@ -26,20 +26,29 @@ Honeypot-Platform-for-Automated-Attack-Analysis/
 
 The honeypot runs on an Ubuntu virtual machine. It exposes an Apache web server and an SSH service, capturing attacks through system logs which are shipped in real time to an external PostgreSQL database.
 
+### Attack Capture Workflow
+
 ```
 External Attacker (Internet)
    │
    ▼
 Vulnerable Application (Apache / OpenSSH)
    │
-   ▼
-System Logs (access.log / auth.log / audit.log / modsec_audit.log)
+   ├── Apache (HTTP logs)        → /var/log/apache2/access.log
+   ├── ModSecurity (payloads)    → /var/log/apache2/modsec_audit.log
+   ├── OpenSSH (auth logs)       → /var/log/auth.log
+   └── Auditd + Rsyslog          → /var/log/audit/audit.log
    │
    ▼
-Filebeat
+Filebeat (ships logs in real time)
    │
    ▼
 Logstash (parses and forwards logs)
+   │
+   ├── access.log      → INSERT INTO attacks (timestamp, attacker_ip, http_method, endpoint, status_code, user_agent, raw_log)
+   ├── modsec_audit.log → UPDATE attacks SET payload WHERE attacker_ip, endpoint, timestamp
+   ├── auth.log        → INSERT INTO auth_logs (timestamp, username, source_ip, status, raw_log)
+   └── audit.log       → INSERT INTO command_logs (timestamp, command, raw_log)
    │
    ▼
 PostgreSQL (external database)
@@ -65,6 +74,8 @@ PostgreSQL (external database)
 ### Part 2 — Web Dashboard
 
 A web application for visualizing and analyzing the captured attack data in real time.
+
+## Attack Monitoring Workflow
 
 ```
 System Administrator
