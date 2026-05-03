@@ -27,10 +27,10 @@ Honeypot-Platform-for-Automated-Attack-Analysis/
 The honeypot runs on an Ubuntu virtual machine. It exposes an Apache web server and an SSH service, capturing attacks through system logs which are shipped in real time to an external PostgreSQL database.
 
 ```
-Attacker
+External Attacker (Internet)
    │
    ▼
-Vulnerable Web App (Apache) / SSH Service
+Vulnerable Application (Apache / OpenSSH)
    │
    ▼
 System Logs (access.log / auth.log / audit.log / modsec_audit.log)
@@ -39,13 +39,10 @@ System Logs (access.log / auth.log / audit.log / modsec_audit.log)
 Filebeat
    │
    ▼
-Logstash
+Logstash (parses and forwards logs)
    │
    ▼
 PostgreSQL (external database)
-   │
-   ▼
-Spring Boot Honeypot Platform
 ```
 
 **Components:**
@@ -70,16 +67,23 @@ Spring Boot Honeypot Platform
 A web application for visualizing and analyzing the captured attack data in real time.
 
 ```
+System Administrator
+   │
+   ▼
 Web Dashboard (React)
+   │                        ▲
+   │ REST API (HTTP/JSON)   │ SSE (real-time events)
+   ▼                        │
+REST API Layer (Spring Boot)
    │
    ▼
-REST API (Spring Boot)
+Service Layer
    │
    ▼
-Data Access Layer (JPA)
+Data Access Layer (JPA / Hibernate)
    │
    ▼
-PostgreSQL Database
+PostgreSQL (external database)
 ```
 
 **Tech stack:**
