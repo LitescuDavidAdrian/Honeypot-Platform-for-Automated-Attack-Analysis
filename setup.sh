@@ -229,6 +229,7 @@ EOF
 
 chmod 600 /etc/logstash/.env
 chown logstash:logstash /etc/logstash/.env
+chattr +i /etc/logstash/.env
 log "Logstash .env file created and secured."
 
 # -----------------------------------------------------------------------------
@@ -465,6 +466,7 @@ log "Services started."
 log "Making Logstash and Filebeat configs immutable..."
 chattr +i /etc/logstash/conf.d/honeypot.conf
 chattr +i /etc/filebeat/filebeat.yml
+chattr +i /etc/logstash/.env
 log "Logstash and Filebeat configs are now immutable."
 
 # -----------------------------------------------------------------------------
@@ -484,5 +486,5 @@ echo "  - Logstash: $(systemctl is-active logstash)"
 echo ""
 warn "Note: Logstash takes 1-2 minutes to fully start up."
 warn "Note: Bash command logging only applies to new terminal sessions."
-warn "Note: To edit honeypot.conf or filebeat.yml, first run: sudo chattr -i <file>"
+warn "Note: To edit honeypot.conf, filebeat.yml or .env, first run: sudo chattr -i <file>"
 echo ""

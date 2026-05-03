@@ -231,6 +231,7 @@ DB_PASSWORD=<your_db_password>
 ```bash
 sudo chmod 600 /etc/logstash/.env
 sudo chown logstash:logstash /etc/logstash/.env
+sudo chattr +i /etc/logstash/.env
 ```
 
 3. Tell systemd to load the `.env` file when starting Logstash:
@@ -571,6 +572,7 @@ The Logstash override was already created in Step 6. For Filebeat and Auditd:
 ```bash
 sudo systemctl edit filebeat
 sudo systemctl edit auditd
+sudo chattr +i /etc/logstash/.env
 ```
 
 Add to each:
@@ -599,9 +601,11 @@ To temporarily remove the immutable flag when you need to make changes:
 ```bash
 sudo chattr -i /etc/logstash/conf.d/honeypot.conf
 sudo chattr -i /etc/filebeat/filebeat.yml
+sudo chattr -i /etc/logstash/.env
 # make your changes
 sudo chattr +i /etc/logstash/conf.d/honeypot.conf
 sudo chattr +i /etc/filebeat/filebeat.yml
+sudo chattr +i /etc/logstash/.env
 ```
 
 > Even if an attacker gets root access, logs are already being shipped to the external database in real time. The few seconds shipping window makes it extremely difficult to cover tracks.

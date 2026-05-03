@@ -216,7 +216,7 @@ DB_PASSWORD=your_db_password
 - Database credentials are stored in `.env` and never hardcoded
 - Logstash, Filebeat, and Auditd are configured to restart automatically and refuse manual stops
 - Audit rules are locked with `-e 2` — cannot be modified without a reboot
-- The Logstash and Filebeat config files are made immutable with `chattr +i`
+- The Logstash and Filebeat config files (including the `.env` credentials file) are made immutable with `chattr +i`
 - Logs are shipped to the external database in real time, making it extremely difficult for an attacker to cover their tracks even with root access
 
 ---
