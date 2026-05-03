@@ -16,6 +16,13 @@
 set -e  # Exit on any error
 
 # -----------------------------------------------------------------------------
+# Unlock previously-immutable files (so re-runs of this script work)
+# -----------------------------------------------------------------------------
+chattr -i /etc/logstash/conf.d/honeypot.conf 2>/dev/null || true
+chattr -i /etc/filebeat/filebeat.yml 2>/dev/null || true
+chattr -i /etc/logstash/.env 2>/dev/null || true
+
+# -----------------------------------------------------------------------------
 # Colors for output
 # -----------------------------------------------------------------------------
 RED='\033[0;31m'
@@ -73,7 +80,44 @@ systemctl start apache2
 log "Apache installed and running."
 
 # -----------------------------------------------------------------------------
-# Step 3 — Install and Configure ModSecurity
+# Step 3 — Install and Configure DVWA
+# -----------------------------------------------------------------------------
+log "Installing DVWA dependencies..."
+apt install git php php-mysqli php-gd libapache2-mod-php mariadb-server -y
+
+log "Cloning DVWA..."
+if [ ! -d /var/www/html/DVWA ]; then
+    cd /var/www/html
+    git clone https://github.com/digininja/DVWA.git
+    chown -R www-data:www-data DVWA
+    chmod -R 755 DVWA
+fi
+
+log "Setting up DVWA database..."
+mysql <<EOF
+CREATE DATABASE IF NOT EXISTS dvwa;
+CREATE USER IF NOT EXISTS 'dvwa'@'localhost' IDENTIFIED BY 'p@ssw0rd';
+GRANT ALL PRIVILEGES ON dvwa.* TO 'dvwa'@'localhost';
+FLUSH PRIVILEGES;
+EOF
+
+log "Configuring DVWA..."
+if [ ! -f /var/www/html/DVWA/config/config.inc.php ]; then
+    cp /var/www/html/DVWA/config/config.inc.php.dist /var/www/html/DVWA/config/config.inc.php
+fi
+
+# Configure PHP settings DVWA needs
+PHP_INI=$(ls /etc/php/*/apache2/php.ini 2>/dev/null | head -n 1)
+if [ -n "$PHP_INI" ]; then
+    sed -i 's/^allow_url_include = .*/allow_url_include = On/' "$PHP_INI"
+    sed -i 's/^allow_url_fopen = .*/allow_url_fopen = On/' "$PHP_INI"
+fi
+
+systemctl restart apache2
+log "DVWA installed. Initialize at http://localhost/DVWA/setup.php"
+
+# -----------------------------------------------------------------------------
+# Step 4 — Install and Configure ModSecurity
 # -----------------------------------------------------------------------------
 log "Installing ModSecurity..."
 apt install libapache2-mod-security2 -y
@@ -90,7 +134,7 @@ systemctl restart apache2
 log "ModSecurity installed and configured."
 
 # -----------------------------------------------------------------------------
-# Step 4 — Install OpenSSH
+# Step 5 — Install OpenSSH
 # -----------------------------------------------------------------------------
 log "Installing OpenSSH..."
 apt install openssh-server -y
@@ -108,7 +152,7 @@ systemctl restart sshd
 log "OpenSSH installed and configured."
 
 # -----------------------------------------------------------------------------
-# Step 5 — Install Auditd
+# Step 6 — Install Auditd
 # -----------------------------------------------------------------------------
 log "Installing Auditd..."
 apt install auditd audispd-plugins -y
@@ -139,7 +183,7 @@ log "Auditd installed and configured."
 
 
 # -----------------------------------------------------------------------------
-# Step 6 — Configure Bash Command Logging
+# Step 7 — Configure Bash Command Logging
 # -----------------------------------------------------------------------------
 log "Configuring bash command logging..."
 
@@ -158,7 +202,7 @@ systemctl restart rsyslog
 log "Bash command logging configured."
 
 # -----------------------------------------------------------------------------
-# Step 7 — Install Filebeat
+# Step 8 — Install Filebeat
 # -----------------------------------------------------------------------------
 log "Installing Filebeat..."
 
@@ -204,7 +248,7 @@ systemctl enable filebeat
 log "Filebeat installed and configured."
 
 # -----------------------------------------------------------------------------
-# Step 8 — Install Logstash & JDBC Driver
+# Step 9 — Install Logstash & JDBC Driver
 # -----------------------------------------------------------------------------
 log "Installing Logstash..."
 apt install logstash -y
@@ -215,7 +259,7 @@ wget -q https://jdbc.postgresql.org/download/postgresql-42.7.3.jar -O /usr/share
 log "JDBC driver downloaded."
 
 # -----------------------------------------------------------------------------
-# Step 9 — Configure Logstash .env file
+# Step 10 — Configure Logstash .env file
 # -----------------------------------------------------------------------------
 log "Configuring Logstash environment variables..."
 
@@ -229,11 +273,10 @@ EOF
 
 chmod 600 /etc/logstash/.env
 chown logstash:logstash /etc/logstash/.env
-chattr +i /etc/logstash/.env
 log "Logstash .env file created and secured."
 
 # -----------------------------------------------------------------------------
-# Step 10 — Configure Logstash Pipeline
+# Step 11 — Configure Logstash Pipeline
 # -----------------------------------------------------------------------------
 log "Configuring Logstash pipeline..."
 
@@ -411,7 +454,7 @@ EOF
 log "Logstash pipeline configured."
 
 # -----------------------------------------------------------------------------
-# Step 11 — Secure the processes with systemd overrides
+# Step 12 — Secure the processes with systemd overrides
 # -----------------------------------------------------------------------------
 log "Configuring systemd overrides..."
 
@@ -453,7 +496,7 @@ systemctl daemon-reload
 log "Systemd overrides configured."
 
 # -----------------------------------------------------------------------------
-# Step 12 — Start all services
+# Step 13 — Start all services
 # -----------------------------------------------------------------------------
 log "Starting all services..."
 systemctl start logstash
@@ -461,7 +504,7 @@ systemctl start filebeat
 log "Services started."
 
 # -----------------------------------------------------------------------------
-# Step 13 — Make Logstash and Filebeat configs immutable
+# Step 14 — Make Logstash and Filebeat configs immutable
 # -----------------------------------------------------------------------------
 log "Making Logstash and Filebeat configs immutable..."
 chattr +i /etc/logstash/conf.d/honeypot.conf
@@ -487,4 +530,5 @@ echo ""
 warn "Note: Logstash takes 1-2 minutes to fully start up."
 warn "Note: Bash command logging only applies to new terminal sessions."
 warn "Note: To edit honeypot.conf, filebeat.yml or .env, first run: sudo chattr -i <file>"
+warn "Note: DVWA must be initialized manually — open http://localhost/DVWA/setup.php and click 'Create / Reset Database'."
 echo ""

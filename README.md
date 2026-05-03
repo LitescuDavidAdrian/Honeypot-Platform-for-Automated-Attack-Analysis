@@ -138,6 +138,7 @@ The project includes a fully automated setup script that provisions the entire h
 The script installs and configures all required components:
 
 - Apache HTTP Server
+- DVWA (Damn Vulnerable Web Application)
 - OpenSSH (with verbose logging enabled)
 - Auditd (with command tracking rules)
 - Filebeat (real-time log shipping)
@@ -170,7 +171,7 @@ sudo ./setup.sh
 
 ### Honeypot Setup
 
-See [setup.md](setup.md) for the full step-by-step guide to setting up the honeypot on the Ubuntu VM, including Apache, Filebeat, Logstash, Auditd, OpenSSH, and PostgreSQL configuration.
+See [setup.md](setup.md) for the full step-by-step guide to setting up the honeypot on the Ubuntu VM, including Apache, DVWA, ModSecurity, Filebeat, Logstash, Auditd, OpenSSH, and PostgreSQL configuration.
 
 ### Backend Setup
 
@@ -224,4 +225,3 @@ DB_PASSWORD=your_db_password
 ## TODO
 
 - [ ] Add attack analysis and pattern detection
-- [ ] Live testing with Kali VM attacking the honeypot

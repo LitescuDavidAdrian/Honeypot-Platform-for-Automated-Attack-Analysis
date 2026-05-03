@@ -1,6 +1,6 @@
 # Honeypot Setup & Configuration
 
-A hybrid honeypot with dynamic operational behavior. Low-interaction, built on Ubuntu VM, using Apache, Filebeat, Logstash, Auditd, and PostgreSQL to capture and analyze attacks in real time.
+A hybrid honeypot with dynamic operational behavior. Low-interaction, built on Ubuntu VM, using Apache, DVWA, ModSecurity, Filebeat, Logstash, Auditd, and PostgreSQL to capture and analyze attacks in real time.
 
 ---
 
@@ -122,7 +122,81 @@ Logs are written to:
 
 ---
 
-## Step 3 — Install and Configure ModSecurity
+## Step 3 — Install and Configure DVWA
+
+DVWA (Damn Vulnerable Web Application) is the intentionally vulnerable web application used to attract and capture attacks. It runs on Apache + PHP + MariaDB and exposes multiple categories of web vulnerabilities (SQL Injection, XSS, Command Injection, Brute Force, File Upload, etc.).
+
+1. Install dependencies:
+
+```bash
+sudo apt install git php php-mysqli php-gd libapache2-mod-php mariadb-server -y
+```
+
+2. Clone DVWA into Apache's web root:
+
+```bash
+cd /var/www/html
+sudo git clone https://github.com/digininja/DVWA.git
+sudo chown -R www-data:www-data DVWA
+sudo chmod -R 755 DVWA
+```
+
+3. Set up the DVWA database:
+
+```bash
+sudo mysql
+```
+
+In the MariaDB prompt:
+
+```sql
+CREATE DATABASE dvwa;
+CREATE USER 'dvwa'@'localhost' IDENTIFIED BY 'p@ssw0rd';
+GRANT ALL PRIVILEGES ON dvwa.* TO 'dvwa'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+4. Configure DVWA:
+
+```bash
+sudo cp /var/www/html/DVWA/config/config.inc.php.dist /var/www/html/DVWA/config/config.inc.php
+sudo nano /var/www/html/DVWA/config/config.inc.php
+```
+
+Make sure these values match:
+
+```php
+$_DVWA[ 'db_user' ]     = 'dvwa';
+$_DVWA[ 'db_password' ] = 'p@ssw0rd';
+$_DVWA[ 'db_database' ] = 'dvwa';
+```
+
+5. Adjust PHP settings DVWA needs:
+
+```bash
+sudo nano /etc/php/*/apache2/php.ini
+```
+
+Set:
+```
+allow_url_include = On
+allow_url_fopen = On
+```
+
+6. Restart Apache:
+
+```bash
+sudo systemctl restart apache2
+```
+
+7. Initialize DVWA — open `http://localhost/DVWA/setup.php` from the VM and click **Create / Reset Database**. Then log in at `http://localhost/DVWA/login.php` with `admin` / `password`.
+
+> The default DVWA security level is `Impossible`. Set it to `Low` from the attacker's machine (Kali) to enable exploitable vulnerabilities for testing. Set it back to `Impossible` when not in use.
+
+---
+
+## Step 4 — Install and Configure ModSecurity
  
 ModSecurity is a Web Application Firewall (WAF) module for Apache that captures full HTTP request bodies, including POST payloads. This allows the honeypot to capture attack payloads (SQL injection, XSS, command injection etc.) instead of just URLs.
  
@@ -159,7 +233,7 @@ You should see the request body inside section `--<id>-C--` of the audit log.
  
 ---
 
-## Step 4 — Install Filebeat
+## Step 5 — Install Filebeat
 
 1. Add the Elastic repository and install Filebeat.
 2. Configure `/etc/filebeat/filebeat.yml`:
@@ -196,7 +270,7 @@ output.logstash:
 
 ---
 
-## Step 5 — Install Logstash & JDBC Driver
+## Step 6 — Install Logstash & JDBC Driver
 
 ```bash
 sudo apt install logstash -y
@@ -206,7 +280,7 @@ sudo wget https://jdbc.postgresql.org/download/postgresql-42.7.3.jar
 
 ---
 
-## Step 6 — Configure Environment Variables
+## Step 7 — Configure Environment Variables
 
 Instead of hardcoding database credentials in the Logstash config, store them in an environment file.
 
@@ -262,7 +336,7 @@ sudo systemctl daemon-reload
 
 ---
 
-## Step 7 — Configure Logstash Pipeline
+## Step 8 — Configure Logstash Pipeline
 
 Create `/etc/logstash/conf.d/honeypot.conf`:
 
@@ -460,7 +534,7 @@ Key notes:
 
 ---
 
-## Step 8 — Install and Configure Auditd
+## Step 9 — Install and Configure Auditd
 
 ```bash
 sudo apt install auditd audispd-plugins -y
@@ -499,7 +573,7 @@ sudo auditctl -s | grep enabled   # verify auditing is enabled
 
 ---
 
-## Step 9 — Configure Bash Command Logging
+## Step 10 — Configure Bash Command Logging
  
 To capture all commands typed by real users (not just sudo commands), configure bash to log every command via syslog.
  
@@ -524,7 +598,7 @@ sudo systemctl restart rsyslog
  
 ---
 
-## Step 10 — Install OpenSSH
+## Step 11 — Install OpenSSH
 
 ```bash
 sudo apt install openssh-server -y
@@ -544,7 +618,7 @@ sudo systemctl restart sshd
 
 ---
 
-## Step 11 — SSH Login Tracking
+## Step 12 — SSH Login Tracking
 
 SSH login attempts are tracked via `auth.log` and stored in the `auth_logs` table. The `status` column has the following values:
 
@@ -563,7 +637,7 @@ ssh ubuntu@localhost        # SUCCESS (correct password) or FAILED (wrong passwo
 
 ---
 
-## Step 12 — Secure the Processes
+## Step 13 — Secure the Processes
 
 Make Logstash, Filebeat, and Auditd restart automatically and refuse manual stops.
 
@@ -572,7 +646,6 @@ The Logstash override was already created in Step 6. For Filebeat and Auditd:
 ```bash
 sudo systemctl edit filebeat
 sudo systemctl edit auditd
-sudo chattr +i /etc/logstash/.env
 ```
 
 Add to each:
