@@ -276,7 +276,10 @@ output.logstash:
 sudo apt install logstash -y
 cd /usr/share/logstash
 sudo wget https://jdbc.postgresql.org/download/postgresql-42.7.3.jar
+sudo /usr/share/logstash/bin/logstash-plugin install logstash-output-jdbc
 ```
+
+> The `logstash-output-jdbc` plugin is community-maintained and not bundled with Logstash by default. It can also be wiped during Logstash package upgrades — to prevent this, you can hold the package: `sudo apt-mark hold logstash`.
 
 ---
 

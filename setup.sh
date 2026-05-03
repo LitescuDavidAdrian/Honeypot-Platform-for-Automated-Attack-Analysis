@@ -258,6 +258,9 @@ log "Downloading PostgreSQL JDBC driver..."
 wget -q https://jdbc.postgresql.org/download/postgresql-42.7.3.jar -O /usr/share/logstash/postgresql-42.7.3.jar
 log "JDBC driver downloaded."
 
+log "Installing logstash-output-jdbc plugin..."
+/usr/share/logstash/bin/logstash-plugin install logstash-output-jdbc
+log "Plugin installed."
 # -----------------------------------------------------------------------------
 # Step 10 — Configure Logstash .env file
 # -----------------------------------------------------------------------------
