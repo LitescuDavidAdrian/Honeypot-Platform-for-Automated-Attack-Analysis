@@ -22,6 +22,10 @@ Honeypot-Platform-for-Automated-Attack-Analysis/
 
 ## Architecture
 
+<p align="center">
+  <img src="HoneypotSystemArchitecture.png" width="800"/>
+</p>
+
 ### Part 1 — Honeypot (Ubuntu VM)
 
 The honeypot runs on an Ubuntu virtual machine. It exposes an Apache web server and an SSH service, capturing attacks through system logs which are shipped in real time to an external PostgreSQL database.
