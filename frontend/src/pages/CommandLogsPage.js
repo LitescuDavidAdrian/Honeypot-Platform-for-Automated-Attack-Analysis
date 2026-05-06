@@ -11,15 +11,17 @@ function CommandLogsPage() {
     const [logs, setLogs] = useState([]);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
-    const [search, setSearch] = useState({ command: '' });
+    const [search, setSearch] = useState({ command: '', dateFrom: '', dateTo: '' });
 
     const fetchData = useCallback((currentPage) => {
-        const hasSearch = search.command;
+        const hasSearch = search.command || search.dateFrom || search.dateTo;
         const params = {
             page: currentPage,
             size: 20
         };
         if (search.command) params.command = search.command;
+        if (search.dateFrom) params.dateFrom = `${search.dateFrom}T00:00:00`;
+        if (search.dateTo) params.dateTo = `${search.dateTo}T23:59:59`;
         if (hasSearch) {
             searchCommandLogs(params).then(res => {
                 setLogs(res.data.content);
@@ -34,7 +36,7 @@ function CommandLogsPage() {
     }, [search]);
 
     const handleClear = () => {
-        setSearch({ command: '' });
+        setSearch({ command: '', dateFrom: '', dateTo: '' });
         setPage(0);
     };
 
@@ -59,7 +61,18 @@ function CommandLogsPage() {
                     value={search.command}
                     onChange={e => setSearch({ ...search, command: e.target.value })}
                 />
-                {/* <button onClick={handleSearch}>Search</button> */}
+                <input
+                    type="date"
+                    value={search.dateFrom}
+                    onChange={e => setSearch({ ...search, dateFrom: e.target.value })}
+                    title="Date From"
+                />
+                <input
+                    type="date"
+                    value={search.dateTo}
+                    onChange={e => setSearch({ ...search, dateTo: e.target.value })}
+                    title="Date To"
+                />
                 <button onClick={handleClear}>Clear</button>
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>

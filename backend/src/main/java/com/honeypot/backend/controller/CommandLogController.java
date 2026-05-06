@@ -6,8 +6,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -38,6 +40,10 @@ public class CommandLogController {
     @GetMapping("/search")
     public Page<CommandLog> search(
             @RequestParam(required = false) String command,
+            @RequestParam(required = false) @DateTimeFormat(iso =
+                    DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso =
+                    DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateTo,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "timestamp") String sortBy,
@@ -47,6 +53,6 @@ public class CommandLogController {
                 ? Sort.by(sortBy).descending()
                 : Sort.by(sortBy).ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
-        return commandLogService.search(command, pageable);
+        return commandLogService.search(command, dateFrom, dateTo, pageable);
     }
 }

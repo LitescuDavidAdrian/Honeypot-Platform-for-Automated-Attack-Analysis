@@ -7,15 +7,17 @@ const formatDate = (timestamp) => {
     return date.toLocaleDateString('en-GB') + ' ' + date.toLocaleTimeString('en-GB');
 };
 
+const HTTP_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
+
 function AttacksPage() {
     const [attacks, setAttacks] = useState([]);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
-    const [search, setSearch] = useState({ endpoint: '', ip: '', status: '' });
+    const [search, setSearch] = useState({ endpoint: '', ip: '', status: '', httpMethod: '', dateFrom: '', dateTo: '' });
     const [selectedAttack, setSelectedAttack] = useState(null);
 
     const fetchData = useCallback((currentPage) => {
-        const hasSearch = search.endpoint || search.ip || search.status;
+        const hasSearch = search.endpoint || search.ip || search.status || search.httpMethod || search.dateFrom || search.dateTo;
         const params = {
             page: currentPage,
             size: 20
@@ -23,6 +25,9 @@ function AttacksPage() {
         if (search.endpoint) params.endpoint = search.endpoint;
         if (search.ip) params.ip = search.ip;
         if (search.status) params.status = parseInt(search.status);
+        if (search.httpMethod) params.httpMethod = search.httpMethod;
+        if (search.dateFrom) params.dateFrom = `${search.dateFrom}T00:00:00`;
+        if (search.dateTo) params.dateTo = `${search.dateTo}T23:59:00`;
 
         if (hasSearch) {
             searchAttacks(params).then(res => {
@@ -38,7 +43,7 @@ function AttacksPage() {
     }, [search]);
 
     const handleClear = () => {
-        setSearch({ endpoint: '', ip: '', status: '' });
+        setSearch({ endpoint: '', ip: '', status: '', httpMethod: '', dateFrom: '', dateTo: '' });
         setPage(0);
     };
 
@@ -80,6 +85,25 @@ function AttacksPage() {
                     placeholder="Status Code"
                     value={search.status}
                     onChange={e => setSearch({ ...search, status: e.target.value })}
+                />
+                <select
+                    value={search.httpMethod}
+                    onChange={e => setSearch({ ... search, httpMethod: e.target.value })}
+                >
+                    <option value="">Any Method</option>
+                    {HTTP_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+                <input
+                    type="date"
+                    value={search.dateFrom}
+                    onChange={e => setSearch({ ...search, dateFrom: e.target.value })}
+                    title="Date From"
+                />
+                <input
+                    type="date"
+                    value={search.dateTo}
+                    onChange={e => setSearch({ ...search, dateTo: e.target.value })}
+                    title="Date To"
                 />
                 <button onClick={handleClear}>Clear</button>
             </div>

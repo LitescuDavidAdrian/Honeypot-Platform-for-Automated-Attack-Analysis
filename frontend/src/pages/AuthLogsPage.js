@@ -7,14 +7,16 @@ const formatDate = (timestamp) => {
     return date.toLocaleDateString('en-GB') + ' ' + date.toLocaleTimeString('en-GB');
 };
 
+const STATUSES = ['FAILED', 'INVALID_USER', 'SUCCESS', 'DISCONNECTED', 'OTHER'];
+
 function AuthLogsPage() {
     const [logs, setLogs] = useState([]);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
-    const [search, setSearch] = useState({ username: '', ip: '', status: '' });
+    const [search, setSearch] = useState({ username: '', ip: '', status: '', dateFrom: '', dateTo: '' });
 
     const fetchData = useCallback((currentPage) => {
-        const hasSearch = search.username || search.ip || search.status;
+        const hasSearch = search.username || search.ip || search.status || search.dateFrom || search.dateTo;
         const params = {
             page: currentPage,
             size: 20
@@ -22,6 +24,8 @@ function AuthLogsPage() {
         if (search.username) params.username = search.username;
         if (search.ip) params.ip = search.ip;
         if (search.status) params.status = search.status;
+        if (search.dateFrom) params.dateFrom = `${search.dateFrom}T00:00:00`;
+        if (search.dateTo) params.dateTo = `${search.dateTo}T23:59:59`;
 
         if (hasSearch) {
             searchAuthLogs(params).then(res => {
@@ -37,7 +41,7 @@ function AuthLogsPage() {
     }, [search]);
 
     const handleClear = () => {
-        setSearch({ username: '', ip: '', status: '' });
+        setSearch({ username: '', ip: '', status: '', dateFrom: '', dateTo: '' });
         setPage(0);
     };
 
@@ -67,11 +71,25 @@ function AuthLogsPage() {
                     value={search.ip}
                     onChange={e => setSearch({ ...search, ip: e.target.value })}
                 />
-                <input placeholder="Status"
+                <select
                     value={search.status}
                     onChange={e => setSearch({ ...search, status: e.target.value })}
+                >
+                    <option value="">Any Status</option>
+                    {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <input
+                    type="date"
+                    value={search.dateFrom}
+                    onChange={e => setSearch({ ...search, dateFrom: e.target.value })}
+                    title="Date From"
                 />
-                {/* <button onClick={handleSearch}>Search</button> */}
+                <input
+                    type="date"
+                    value={search.dateTo}
+                    onChange={e => setSearch({ ...search, dateTo: e.target.value })}
+                    title="Date To"
+                />
                 <button onClick={handleClear}>Clear</button>
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>

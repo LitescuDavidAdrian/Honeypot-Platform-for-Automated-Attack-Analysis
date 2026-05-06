@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -21,7 +22,8 @@ public class CommandLogService {
         return commandLogRepository.findAll(pageable);
     }
 
-    public Page<CommandLog> search(String command, Pageable pageable) {
-        return commandLogRepository.search(command, pageable);
+    public Page<CommandLog> search(String command, LocalDateTime dateFrom,
+                                   LocalDateTime dateTo, Pageable pageable) {
+        return commandLogRepository.search(command, dateFrom, dateTo, pageable);
     }
 }

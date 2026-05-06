@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -21,7 +22,10 @@ public class AuthLogService {
         return authLogRepository.findAll(pageable);
     }
 
-    public Page<AuthLog> search(String username, String ip, String status, Pageable pageable) {
-        return authLogRepository.search(username, ip, status, pageable);
+    public Page<AuthLog> search(String username, String ip, String status,
+                                LocalDateTime dateFrom, LocalDateTime dateTo,
+                                Pageable pageable) {
+        return authLogRepository.search(username, ip, status,
+                dateFrom, dateTo, pageable);
     }
 }

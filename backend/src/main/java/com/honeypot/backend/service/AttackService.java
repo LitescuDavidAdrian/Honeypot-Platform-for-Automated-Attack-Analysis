@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -21,7 +22,11 @@ public class AttackService {
         return attackRepository.findAll(pageable);
     }
 
-    public Page<Attack> search(String endpoint, String ip, Integer status, Pageable pageable) {
-        return attackRepository.search(endpoint, ip, status, pageable);
+    public Page<Attack> search(String endpoint, String ip,
+                               Integer status, String httpMethod,
+                               LocalDateTime dateFrom, LocalDateTime dateTo,
+                               Pageable pageable) {
+        return attackRepository.search(endpoint, ip, status, httpMethod,
+                dateFrom, dateTo, pageable);
     }
 }
