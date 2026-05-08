@@ -213,11 +213,14 @@ sudo nano /etc/modsecurity/modsecurity.conf
 ```
  
 Make the following changes:
-- Change `SecRuleEngine DetectionOnly` to `SecRuleEngine On`
+- Confirm `SecRuleEngine DetectionOnly` (the default — do NOT change to `On` for this setup)
 - Change `SecAuditEngine RelevantOnly` to `SecAuditEngine On`
 - Confirm `SecAuditLogParts` includes `I` (request body) — for example: `SecAuditLogParts ABIJDEFHZ`
 - Confirm `SecAuditLog /var/log/apache2/modsec_audit.log`
 - Confirm `SecAuditLogType Serial`
+
+> **Why DetectionOnly?** A typical WAF runs in `On` mode to block detected attacks. For a honeypot, we want the opposite — let attacks through so they reach the vulnerable application, but log them with full payloads. `DetectionOnly` mode logs every transaction (including request bodies) without interfering with the response. If ModSecurity is set to `On`, attack payloads like `;whoami`, `cat /etc/passwd`, or SQL injection strings will be blocked with a 403 before reaching DVWA, breaking the honeypot demonstration.
+
 Restart Apache:
 ```bash
 sudo systemctl restart apache2

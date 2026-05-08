@@ -126,8 +126,9 @@ a2enmod security2
 # Set up ModSecurity config
 cp /etc/modsecurity/modsecurity.conf-recommended /etc/modsecurity/modsecurity.conf
 
-# Enable rule engine and audit engine, ensure request body is logged
-sed -i 's/^SecRuleEngine DetectionOnly/SecRuleEngine On/' /etc/modsecurity/modsecurity.conf
+# Keep SecRuleEngine in DetectionOnly mode (default) so attacks reach the app
+# but are still logged by the audit engine. If we set this to "On", ModSecurity
+# would block attack payloads with 403, defeating the purpose of the honeypot.
 sed -i 's/^SecAuditEngine RelevantOnly/SecAuditEngine On/' /etc/modsecurity/modsecurity.conf
 
 systemctl restart apache2
@@ -261,6 +262,7 @@ log "JDBC driver downloaded."
 log "Installing logstash-output-jdbc plugin..."
 /usr/share/logstash/bin/logstash-plugin install logstash-output-jdbc
 log "Plugin installed."
+
 # -----------------------------------------------------------------------------
 # Step 10 — Configure Logstash .env file
 # -----------------------------------------------------------------------------

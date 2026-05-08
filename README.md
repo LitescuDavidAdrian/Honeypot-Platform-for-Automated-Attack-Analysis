@@ -64,7 +64,7 @@ PostgreSQL (external database)
 - **Auditd** — tracks all commands executed on the system
 - **Filebeat** — ships logs in real time to Logstash
 - **Logstash** — parses logs and forwards them to PostgreSQL
-- **ModSecurity** — Web Application Firewall that captures full HTTP request bodies (payloads)
+- **ModSecurity** — Web Application Firewall in DetectionOnly mode; logs full request bodies (payloads) without blocking, allowing attacks to reach DVWA so the honeypot can capture the complete attack chain
 - **PostgreSQL** — external database storing all captured attack data
 
 **Data captured:**
