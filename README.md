@@ -113,6 +113,8 @@ PostgreSQL (external database)
 - Partial search and filtering using native SQL `LIKE` queries
 - Real-time push notifications via SSE (Server-Sent Events) and PostgreSQL `LISTEN/NOTIFY`
 - Global CORS configuration for React frontend
+- Aggregated statistics and automated analysis endpoints (`/stats/*`)
+- Automated brute force detection (flags IPs exceeding failed login thresholds)
 
 
 **Frontend features:**
@@ -122,6 +124,8 @@ PostgreSQL (external database)
 - Pagination with page reset on filter change
 - Formatted timestamps
 - View Details popup showing raw log and request payload (closeable with Escape key)
+- Overview page with summary cards, distribution charts, attack timeline, and brute force detection
+- Near real-time statistics updates via SSE with debounce
 
 ---
 
@@ -225,7 +229,3 @@ DB_PASSWORD=your_db_password
 - Logs are shipped to the external database in real time, making it extremely difficult for an attacker to cover their tracks even with root access
 
 ---
-
-## TODO
-
-- [ ] Add attack analysis and pattern detection
