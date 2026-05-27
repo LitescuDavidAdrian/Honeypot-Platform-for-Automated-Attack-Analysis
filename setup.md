@@ -519,7 +519,7 @@ output {
         username => "${DB_USER}"
         password => "${DB_PASSWORD}"
         statement => [
-          "UPDATE attacks SET payload = ? WHERE attacker_ip = ? AND endpoint = ? AND payload IS NULL AND timestamp >= NOW() - INTERVAL '10 seconds'",
+          "UPDATE attacks SET payload = ? WHERE id = (SELECT id FROM attacks WHERE attacker_ip = ? AND endpoint = ? AND http_method = 'POST' AND payload IS NULL AND timestamp >= NOW() - INTERVAL '10 seconds' ORDER BY timestamp DESC, id DESC LIMIT 1)",
           "payload",
           "modsec_ip",
           "modsec_endpoint"
@@ -536,7 +536,7 @@ Key notes:
 - `?::integer` casts the HTTP status code string to INTEGER.
 - The `_grokparsefailure` drop ensures malformed or irrelevant log lines are discarded.
 - Sudo commands are captured via `USER_CMD` with a `"sudo "` prefix. Regular user commands are captured via auditd EXECVE events for the `logger` process and deduplicated to avoid double-logging sudo commands.
-- POST payloads are captured by ModSecurity into `modsec_audit.log`, parsed by Logstash, and used to UPDATE the matching `attacks` row by `attacker_ip`, `endpoint` and recent timestamp. The PostgreSQL UPDATE trigger then fires an SSE event so the dashboard refreshes with the payload.
+- POST payloads are captured by ModSecurity into `modsec_audit.log`, parsed by Logstash, and used to UPDATE the matching `attacks` row. The match targets the most recent `POST` request from the same `attacker_ip` and `endpoint` within a short time window, ensuring that GET requests sharing the same endpoint are never assigned a payload. The PostgreSQL UPDATE trigger then fires an SSE event so the dashboard refreshes with the payload.
 
 ---
 

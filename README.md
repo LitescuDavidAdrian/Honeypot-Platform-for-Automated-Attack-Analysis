@@ -50,7 +50,7 @@ Filebeat (ships logs in real time)
 Logstash (parses and forwards logs)
    │
    ├── access.log      → INSERT INTO attacks (timestamp, attacker_ip, http_method, endpoint, status_code, user_agent, raw_log)
-   ├── modsec_audit.log → UPDATE attacks SET payload WHERE attacker_ip, endpoint, timestamp
+   ├── modsec_audit.log → UPDATE attacks SET payload WHERE attacker_ip, endpoint, http_method=POST, timestamp
    ├── auth.log        → INSERT INTO auth_logs (timestamp, username, source_ip, status, raw_log)
    └── audit.log       → INSERT INTO command_logs (timestamp, command, raw_log)
    │

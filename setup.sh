@@ -445,7 +445,7 @@ output {
         username => "${DB_USER}"
         password => "${DB_PASSWORD}"
         statement => [
-          "UPDATE attacks SET payload = ? WHERE attacker_ip = ? AND endpoint = ? AND payload IS NULL AND timestamp >= NOW() - INTERVAL '10 seconds'",
+          "UPDATE attacks SET payload = ? WHERE id = (SELECT id FROM attacks WHERE attacker_ip = ? AND endpoint = ? AND http_method = 'POST' AND payload IS NULL AND timestamp >= NOW() - INTERVAL '10 seconds' ORDER BY timestamp DESC, id DESC LIMIT 1)",
           "payload",
           "modsec_ip",
           "modsec_endpoint"
