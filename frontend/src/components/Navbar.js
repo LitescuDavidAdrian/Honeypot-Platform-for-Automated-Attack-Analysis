@@ -28,6 +28,7 @@ function Navbar() {
     return (
         <nav style={navStyle}>
             <span style={titleStyle}>Honeypot Dashboard</span>
+            <Link to="/overview" style={linkStyle('/overview')}>Overview</Link>
             <Link to="/attacks" style={linkStyle('/attacks')}>Attacks</Link>
             <Link to="/auth-logs" style={linkStyle('/auth-logs')}>Auth Logs</Link>
             <Link to="/command-logs" style={linkStyle('/command-logs')}>Command Logs</Link>
