@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { getAttacks, searchAttacks } from '../services/api';
+import { exportToCSV } from '../utils/exportCsv';
 
 const formatDate = (timestamp) => {
     if (!timestamp) return '';
@@ -45,6 +46,33 @@ function AttacksPage() {
     const handleClear = () => {
         setSearch({ endpoint: '', ip: '', status: '', httpMethod: '', dateFrom: '', dateTo: '' });
         setPage(0);
+    };
+
+    const handleExport = () => {
+        const hasSearch = search.endpoint || search.ip || search.status || search.httpMethod || search.dateFrom || search.dateTo;
+        const params = { page: 0, size: 100000 };
+        if (search.endpoint) params.endpoint = search.endpoint;
+        if (search.ip) params.ip = search.ip;
+        if (search.status) params.status = parseInt(search.status);
+        if (search.httpMethod) params.httpMethod = search.httpMethod;
+        if (search.dateFrom) params.dateFrom = `${search.dateFrom}T00:00:00`;
+        if (search.dateTo) params.dateTo = `${search.dateTo}T23:59:00`;
+
+        const request = hasSearch ? searchAttacks(params) : getAttacks(0, 100000);
+
+        request.then(res => {
+            const rows = res.data.content.map(a => ({
+                timestamp: formatDate(a.timestamp),
+                attacker_ip: a.attackerIp,
+                http_method: a.httpMethod,
+                endpoint: a.endpoint,
+                status_code: a.statusCode,
+                user_agent: a.userAgent,
+                payload: a.payload || '',
+                raw_log: a.rawLog
+            }));
+            exportToCSV(rows, `attacks_${new Date().toISOString().slice(0, 10)}.csv`)
+        });
     };
 
     useEffect(() => { fetchData(page); }, [page, fetchData]);
@@ -106,6 +134,7 @@ function AttacksPage() {
                     title="Date To"
                 />
                 <button onClick={handleClear}>Clear</button>
+                <button onClick={handleExport} style={{ marginLeft: 'auto', backgroundColor: '#2ecc71', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '4px', cursor: 'pointer '}}>Export CSV</button>
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>

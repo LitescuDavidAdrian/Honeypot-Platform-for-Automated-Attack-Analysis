@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { getCommandLogs, searchCommandLogs } from '../services/api';
+import { exportToCSV } from '../utils/exportCsv';
 
 const formatDate = (timestamp) => {
     if (!timestamp) return '';
@@ -40,6 +41,25 @@ function CommandLogsPage() {
         setPage(0);
     };
 
+    const handleExport = () => {
+        const hasSearch = search.command || search.dateFrom || search.dateTo;
+        const params = { page: 0, size: 100000 };
+        if (search.command) params.command = search.command;
+        if (search.dateFrom) params.dateFrom = `${search.dateFrom}T00:00:00`;
+        if (search.dateTo) params.dateTo = `${search.dateTo}T23:59:59`;
+
+        const request = hasSearch ? searchCommandLogs(params) : getCommandLogs(0, 100000);
+
+        request.then(res => {
+            const rows = res.data.content.map(l => ({
+                timestamp: formatDate(l.timestamp),
+                command: l.command,
+                raw_log: l.rawLog
+            }));
+            exportToCSV(rows, `command_logs_${new Date().toISOString().slice(0, 10)}.csv`);
+        });
+    };
+
     useEffect(() => { fetchData(page); }, [page, fetchData]);
 
     useEffect(() => { setPage(0); }, [search]);
@@ -74,6 +94,7 @@ function CommandLogsPage() {
                     title="Date To"
                 />
                 <button onClick={handleClear}>Clear</button>
+                <button onClick={handleExport} style={{ marginLeft: 'auto', backgroundColor: '#2ecc71', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '4px', cursor: 'pointer' }}>Export CSV</button>
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>

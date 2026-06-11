@@ -1,5 +1,6 @@
-import React, { useEffect, useState,  useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { getAuthLogs, searchAuthLogs } from '../services/api';
+import { exportToCSV } from '../utils/exportCsv';
 
 const formatDate = (timestamp) => {
     if (!timestamp) return '';
@@ -43,6 +44,29 @@ function AuthLogsPage() {
     const handleClear = () => {
         setSearch({ username: '', ip: '', status: '', dateFrom: '', dateTo: '' });
         setPage(0);
+    };
+
+    const handleExport = () => {
+        const hasSearch = search.username || search.ip || search.status || search.dateFrom || search.dateTo;
+        const params = { page: 0, size: 100000 };
+        if (search.username) params.username = search.username;
+        if (search.ip) params.ip = search.ip;
+        if (search.status) params.status = search.status;
+        if (search.dateFrom) params.dateFrom = `${search.dateFrom}T00:00:00`;
+        if (search.dateTo) params.dateTo = `${search.dateTo}T23:59:59`;
+
+        const request = hasSearch ? searchAuthLogs(params) : getAuthLogs(0, 100000);
+
+        request.then(res => {
+            const rows = res.data.content.map(l => ({
+                timestamp: formatDate(l.timestamp),
+                username: l.username,
+                source_ip: l.sourceIp,
+                status: l.status,
+                raw_log: l.rawLog
+            }));
+            exportToCSV(rows, `auth_logs_${new Date().toISOString().slice(0, 10)}.csv`);
+        });
     };
 
     useEffect(() => { fetchData(page); }, [page, fetchData]);
@@ -91,6 +115,7 @@ function AuthLogsPage() {
                     title="Date To"
                 />
                 <button onClick={handleClear}>Clear</button>
+                <button onClick={handleExport} style={{ marginLeft: 'auto', backgroundColor: '#2ecc71', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '4px', cursor: 'pointer' }}>Export CSV</button>
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
