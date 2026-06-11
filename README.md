@@ -126,6 +126,7 @@ PostgreSQL (external database)
 - View Details popup showing raw log and request payload (closeable with Escape key)
 - Overview page with summary cards, distribution charts, attack timeline, and brute force detection
 - Near real-time statistics updates via SSE with debounce
+- CSV export on Attacks, Auth Logs, and Command Logs pages — exports all records or only the current filtered view
 
 ---
 
