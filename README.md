@@ -127,6 +127,7 @@ PostgreSQL (external database)
 - Overview page with summary cards, distribution charts, attack timeline, and brute force detection
 - Near real-time statistics updates via SSE with debounce
 - CSV export on Attacks, Auth Logs, and Command Logs pages — exports all records or only the current filtered view
+- Attack Replay page that reconstructs an attacker's activity as a single chronological timeline, combining web requests, SSH authentication attempts, and commands, with optional time-window filtering
 
 ---
 
