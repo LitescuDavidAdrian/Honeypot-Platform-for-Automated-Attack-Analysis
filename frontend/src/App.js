@@ -4,6 +4,7 @@ import OverviewPage from './pages/OverviewPage';
 import AttacksPage from './pages/AttacksPage';
 import AuthLogsPage from './pages/AuthLogsPage';
 import CommandLogsPage from './pages/CommandLogsPage';
+import ReplayPage from './pages/ReplayPage';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path="/attacks" element={<AttacksPage />} />
           <Route path="/auth-logs" element={<AuthLogsPage />} />
           <Route path="/command-logs" element={<CommandLogsPage />} />
+          <Route path="/replay" element={<ReplayPage />} />
         </Routes>
       </div>
     </Router>
