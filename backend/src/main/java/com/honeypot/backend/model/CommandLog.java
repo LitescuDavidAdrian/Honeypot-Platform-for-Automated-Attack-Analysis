@@ -1,7 +1,6 @@
 package com.honeypot.backend.model;
 
 import jakarta.persistence.*;
-import jdk.jfr.Enabled;
 
 import java.time.LocalDateTime;
 
