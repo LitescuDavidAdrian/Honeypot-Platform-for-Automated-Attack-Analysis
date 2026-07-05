@@ -134,7 +134,7 @@ function AttacksPage() {
                     title="Date To"
                 />
                 <button onClick={handleClear}>Clear</button>
-                <button onClick={handleExport} style={{ marginLeft: 'auto', backgroundColor: '#2ecc71', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '4px', cursor: 'pointer '}}>Export CSV</button>
+                <button onClick={handleExport} style={{ marginLeft: 'auto', backgroundColor: '#2ecc71', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '4px', cursor: 'pointer' }}>Export CSV</button>
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
