@@ -10,7 +10,6 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @RestController
 @RequestMapping("/command-logs")
@@ -34,7 +33,7 @@ public class CommandLogController {
                 : Sort.by(sortBy).ascending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
-        return commandLogService.getALlCommandLogs(pageable);
+        return commandLogService.getAllCommandLogs(pageable);
     }
 
     @GetMapping("/search")

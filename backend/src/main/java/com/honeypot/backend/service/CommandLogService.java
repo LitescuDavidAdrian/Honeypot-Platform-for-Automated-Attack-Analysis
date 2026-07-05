@@ -7,7 +7,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 public class CommandLogService {
@@ -18,7 +17,7 @@ public class CommandLogService {
         this.commandLogRepository = commandLogRepository;
     }
 
-    public Page<CommandLog> getALlCommandLogs(Pageable pageable) {
+    public Page<CommandLog> getAllCommandLogs(Pageable pageable) {
         return commandLogRepository.findAll(pageable);
     }
 
